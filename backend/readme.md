@@ -1,0 +1,4 @@
+- go to the backend directory (not portfolio)
+- This project has venv so activate it first : venv/Scripts/activate
+- Then start: uvicorn app.main:app --reload
+- update requirements: pip freeze > requirements.txt
