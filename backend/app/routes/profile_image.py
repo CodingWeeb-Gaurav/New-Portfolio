@@ -1,12 +1,13 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from app.database import db
 import os, uuid
+from app.core.security import get_current_admin
 
-router = APIRouter(prefix="/profile/image", tags=["Profile Image"])
-
+public_router = APIRouter(prefix="/profile/image", tags=["Profile Image"])
+admin_router = APIRouter(prefix="/profile/image", tags=["Profile Image"], dependencies=[Depends(get_current_admin)])
 IMAGE_DIR = "static/profile/image"
 
-@router.put("")
+@admin_router.put("")
 async def upload_or_update_image(file: UploadFile = File(...)):
     os.makedirs(IMAGE_DIR, exist_ok=True)
 
@@ -32,7 +33,7 @@ async def upload_or_update_image(file: UploadFile = File(...)):
 
     return {"image_url": filepath}
 
-@router.delete("")
+@admin_router.delete("")
 async def delete_image():
     profile = await db.profile.find_one({"_id": "profile"})
     if not profile or not profile.get("image_url"):
@@ -49,7 +50,7 @@ async def delete_image():
 
     return {"message": "Profile image removed"}
 
-@router.get("")
+@public_router.get("")
 async def get_image():
     profile = await db.profile.find_one({"_id": "profile"})
     return {

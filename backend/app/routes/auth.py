@@ -10,7 +10,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def login(data:dict, response: Response):
     email = data.get("email")
     password = data.get("password")
-    admin = await db.admins.find_one({"email": email})
+    admin = await db.admin.find_one({"email": email})
     if not admin or not verify_password(password, admin["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     access_token = create_access_token({"sub": email})

@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from app.database import db
 from bson import ObjectId
 import os
 import uuid
+from app.core.security import get_current_admin
 
-router = APIRouter(prefix="/api/timelines", tags=["timelines"])
-
+public_router = APIRouter(prefix="/api/timelines", tags=["timelines"])
+admin_router = APIRouter(prefix="/api/timelines", tags=["timelines"], dependencies=[Depends(get_current_admin)])
 UPLOAD_DIR = "static/uploads/timelines"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.get("/")
+@public_router.get("/")
 async def get_timelines():
     timelines = []
     async for timeline in db.timelines.find({}).sort("order", 1):
@@ -18,7 +19,7 @@ async def get_timelines():
         timelines.append(timeline)
     return timelines
 
-@router.post("/")
+@admin_router.post("/")
 async def add_timeline(
     header: str = Form(...),
     subheader: str = Form(...),
@@ -58,7 +59,7 @@ async def add_timeline(
     result = await db.timelines.insert_one(timeline_data)
     return {"id": str(result.inserted_id), "message": "Timeline added successfully"}
 
-@router.put("/{timeline_id}")
+@admin_router.put("/{timeline_id}")
 async def update_timeline(
     timeline_id: str,
     header: str | None = Form(None),
@@ -112,7 +113,7 @@ async def update_timeline(
 
     return {"message": "Timeline updated successfully"}
 
-@router.delete("/{timeline_id}")
+@admin_router.delete("/{timeline_id}")
 async def delete_timeline(timeline_id: str):
     timeline = await db.timelines.find_one({"_id": ObjectId(timeline_id)})
     if not timeline:

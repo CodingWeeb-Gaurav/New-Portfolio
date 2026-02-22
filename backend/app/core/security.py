@@ -1,7 +1,7 @@
 from passlib.context import CryptContext #for hashing passwords
 from jose import JWTError, jwt #for creating and verifying JSON Web Tokens
 from datetime import datetime, timedelta, timezone #for handling token expiration
-from fastapi import Depends, HTTPException, status #for handling dependencies and exceptions in FastAPI
+from fastapi import Depends, HTTPException, Security, status #for handling dependencies and exceptions in FastAPI
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer #for handling OAuth2 authentication
 import os
 
@@ -11,6 +11,9 @@ SECRET_KEY = os.getenv("SECRET_KEY") #is the format of sectret key automatically
 ALGORITHM = "HS256" #specify the algorithm used for encoding and decoding JWTs
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 #set the expiration time for access tokens
 REFRESH_TOKEN_EXPIRE_DAYS = 7 #set the expiration time for refresh tokens
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY not set in environment")
 
 security = HTTPBearer() #initialize HTTP Bearer authentication scheme, this is used to extract the token from the Authorization header in incoming requests
 
@@ -32,11 +35,12 @@ def create_refresh_token(data: dict):
     to_encode.update({"exp":expire, "type":"refresh"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) #create and return a JWT refresh token with the specified data and expiration time
 
-def get_current_admin(token= Depends(security)):
+def get_current_admin(credentials = Security(security)):
+    token = credentials.credentials
     try:
-        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != "access":
             raise HTTPException(status_code=401, detail="Invalid token type")
+        return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return payload #decode the JWT token and return the payload if valid, otherwise raise an HTTP 401 Unauthorized exception    

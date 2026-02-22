@@ -3,9 +3,11 @@ from app.database import db
 from app.models.skill import SkillCategory
 from bson import ObjectId
 import os, uuid
+from fastapi import Depends
+from app.core.security import get_current_admin
 
-router = APIRouter(prefix="/api/skills", tags=["skills"])
-
+public_router = APIRouter(prefix="/api/skills", tags=["skills"])
+admin_router = APIRouter(prefix="/api/skills", tags=["skills"], dependencies=[Depends(get_current_admin)])
 UPLOAD_DIR = "static/uploads/skills"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -54,7 +56,7 @@ def delete_logo(logo_path: str | None):
 # Routes
 # ---------------------------
 
-@router.get("/")
+@public_router.get("/")
 async def get_skills():
     skills = []
     async for skill in db.skills.find({}).sort(
@@ -66,12 +68,12 @@ async def get_skills():
     return skills
 
 
-@router.get("/categories")
+@public_router.get("/categories")
 async def get_skill_categories():
     return [c.value for c in SkillCategory]
 
 
-@router.post("/")
+@admin_router.post("/")
 async def add_skill(
     name: str = Form(...),
     category: SkillCategory = Form(...),
@@ -103,7 +105,7 @@ async def add_skill(
     return {"id": str(result.inserted_id), "message": "Skill added successfully"}
 
 
-@router.put("/{skill_id}")
+@admin_router.put("/{skill_id}")
 async def update_skill(
     skill_id: str,
     name: str | None = Form(None),
@@ -157,7 +159,7 @@ async def update_skill(
     return {"message": "Skill updated successfully"}
 
 
-@router.delete("/{skill_id}")
+@admin_router.delete("/{skill_id}")
 async def delete_skill(skill_id: str):
     skill = await db.skills.find_one({"_id": ObjectId(skill_id)})
     if not skill:

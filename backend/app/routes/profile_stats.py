@@ -8,7 +8,7 @@ from app.services.profile_stats_fetcher import (
 from datetime import datetime
 
 router = APIRouter(prefix="/profile/stats", tags=["Profile Stats"])
-
+#doesnt have any post/patch/put/delete routes bcz its a read only data which is being updated by a routine job in background, so only get route is needed
 @router.get("")
 async def get_profile_stats():
 

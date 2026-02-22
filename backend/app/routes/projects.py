@@ -3,9 +3,11 @@ from app.database import db
 from app.models.project import ProjectUpdate
 from bson import ObjectId
 import os, uuid
+from fastapi import Depends
+from app.core.security import get_current_admin
 
-router = APIRouter(prefix="/api/projects", tags=["projects"])
-
+public_router = APIRouter(prefix="/api/projects", tags=["projects"])
+admin_router = APIRouter(prefix="/api/projects", tags=["projects"], dependencies=[Depends(get_current_admin)])
 UPLOAD_DIR = "static/uploads/projects"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -55,7 +57,7 @@ def delete_image(image_link: str | None):
 # Routes
 # ---------------------------
 
-@router.get("/")
+@public_router.get("/")
 async def get_projects():
     projects = []
     async for p in db.projects.find({}).sort(
@@ -67,7 +69,7 @@ async def get_projects():
     return projects
 
 
-@router.post("/")
+@admin_router.post("/")
 async def add_project(
     name: str = Form(...),
     category_id: str = Form(...),
@@ -107,7 +109,7 @@ async def add_project(
     return {"id": str(result.inserted_id)}
 
 
-@router.put("/{project_id}")
+@admin_router.put("/{project_id}")
 async def update_project(project_id: str, payload: ProjectUpdate):
     project = await db.projects.find_one({"_id": ObjectId(project_id)})
     if not project:
@@ -130,7 +132,7 @@ async def update_project(project_id: str, payload: ProjectUpdate):
     return {"message": "Project updated"}
 
 
-@router.delete("/{project_id}")
+@admin_router.delete("/{project_id}")
 async def delete_project(project_id: str):
     project = await db.projects.find_one({"_id": ObjectId(project_id)})
     if not project:

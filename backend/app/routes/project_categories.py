@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Depends
 from app.database import db
 from app.models.project_category import ProjectCategoryUpdate
 from bson import ObjectId
 import os, uuid
+from app.core.security import get_current_admin
 
-router = APIRouter(prefix="/api/project-categories", tags=["project_categories"])
+public_router = APIRouter(prefix="/api/project-categories", tags=["project_categories"])
+admin_router = APIRouter(prefix="/api/project-categories", tags=["project_categories"], dependencies=[Depends(get_current_admin)])
 
 UPLOAD_DIR = "static/uploads/project_categories/"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -25,7 +27,7 @@ async def get_other_category_id():
     return str(other["_id"])
 
 
-@router.get("/")
+@public_router.get("/")
 async def get_categories():
     categories = []
     async for c in db.project_categories.find({}).sort("order", 1):
@@ -35,7 +37,7 @@ async def get_categories():
     return categories
 
 
-@router.get("/with-projects")
+@public_router.get("/with-projects")
 async def get_categories_with_projects(
     enabled_only: bool = Query(False)
 ):
@@ -76,7 +78,7 @@ async def get_categories_with_projects(
     return results
 
 
-@router.post("/")
+@admin_router.post("/")
 async def add_category(
     name: str = Form(...),
     description: str | None = Form(None),
@@ -103,7 +105,7 @@ async def add_category(
     return {"id": str(result.inserted_id)}
 
 
-@router.put("/{category_id}")
+@admin_router.put("/{category_id}")
 async def update_category(category_id: str, payload: ProjectCategoryUpdate):
     update_data = {k: v for k, v in payload.dict().items() if v is not None}
     if not update_data:
@@ -116,7 +118,7 @@ async def update_category(category_id: str, payload: ProjectCategoryUpdate):
 
     return {"message": "Category updated"}
 
-@router.delete("/{category_id}")
+@admin_router.delete("/{category_id}")
 async def delete_category(category_id: str):
     category = await db.project_categories.find_one({"_id": ObjectId(category_id)})
     if not category:
