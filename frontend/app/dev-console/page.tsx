@@ -1,186 +1,243 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
-import { login } from "@/services/auth";
+import { useState, useEffect, useRef, useCallback } from "react";
+import "./admin.css";
+import { fetchAllData } from "@/services/adminData";
 import { apiRequest } from "@/services/api";
+import LoginModal from "./components/LoginModal";
+import ProfileSection from "./components/ProfileSection";
+import SkillsSection from "./components/SkillsSection";
+import ProjectsSection from "./components/ProjectsSection";
+import TimelineSection from "./components/TimelineSection";
+import ChatbotSection from "./components/ChatbotSection";
+
+type Section = "profile" | "skills" | "projects" | "timeline" | "chatbot" | "rawapi";
+
+interface Toast { id: number; msg: string; type: string; }
+
+const NAV = [
+  { id: "profile", icon: "👤", label: "Profile" },
+  { id: "skills", icon: "🛠", label: "Skills" },
+  { id: "projects", icon: "🗂", label: "Projects" },
+  { id: "timeline", icon: "⏳", label: "Timeline" },
+  { id: "chatbot", icon: "🤖", label: "Chatbot Data" },
+  { id: "rawapi", icon: "⚡", label: "Raw API Tester" },
+] as const;
+
+// Placeholder visitor stats — replace with real tracking later
+const VISITOR_STATS = [
+  { icon: "👁", value: "1,247", label: "Portfolio Visits", change: "+12% this week" },
+  { icon: "💬", value: "89", label: "Chatbot Interactions", change: "+5 today" },
+  { icon: "📂", value: "34", label: "Resume Downloads", change: "This month" },
+  { icon: "⭐", value: "312", label: "GitHub Stars", change: "Across repos" },
+  { icon: "🔥", value: "7", label: "Active Days Streak", change: "Current streak" },
+];
 
 export default function DevConsole() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [section, setSection] = useState<Section>("profile");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginMessage, setLoginMessage] = useState<string | undefined>(undefined);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [fetching, setFetching] = useState(true);
+  const toastCounter = useRef(0);
 
-  const [endpoint, setEndpoint] = useState("/projects/");
-  const [method, setMethod] = useState("GET");
-  const [body, setBody] = useState("{}");
-  const [response, setResponse] = useState<any>(null);
+  // Raw API tester state
+  const [rawEndpoint, setRawEndpoint] = useState("/api/skills/");
+  const [rawMethod, setRawMethod] = useState("GET");
+  const [rawBody, setRawBody] = useState("{}");
+  const [rawResponse, setRawResponse] = useState<any>(null);
+  const [rawLoading, setRawLoading] = useState(false);
 
-  async function handleLogin() {
-    try {
-      const data = await login(email, password);
-      setResponse(data);
-    } catch (err: any) {
-      setResponse(err.message || "Login failed");
-    }
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("access_token"));
+    // Hydrate localStorage with all backend GET data
+    fetchAllData().finally(() => setFetching(false));
+  }, []);
+
+  /* ── Toast helper ── */
+  const toast = useCallback((msg: string, type = "success") => {
+    const id = ++toastCounter.current;
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+  }, []);
+
+  /* ── Auth gate: run callback only if logged in, else open modal ── */
+  const requireAuth = useCallback((cb: () => void) => {
+    if (localStorage.getItem("access_token")) { cb(); return; }
+    setLoginMessage("You need to log in to submit changes.");
+    setPendingAction(() => cb);
+    setLoginOpen(true);
+  }, []);
+
+  function handleLoginSuccess() {
+    setIsLoggedIn(true);
+    setLoginOpen(false);
+    toast("Logged in successfully!", "success");
+    if (pendingAction) { pendingAction(); setPendingAction(null); }
   }
 
-  async function handleRequest() {
-    try {
-      const parsedBody =
-        method === "GET" || method === "DELETE"
-          ? undefined
-          : body
-          ? JSON.parse(body)
-          : undefined;
-
-      const data = await apiRequest(endpoint, method, parsedBody);
-      setResponse(data);
-    } catch (err: any) {
-      setResponse(err.message || "Request failed");
-    }
+  function handleLogout() {
+    localStorage.removeItem("access_token");
+    setIsLoggedIn(false);
+    toast("Logged out.", "info");
   }
 
-  const inputStyle: React.CSSProperties = {
-    padding: "8px",
-    marginRight: "8px",
-    marginBottom: "10px",
-    borderRadius: 6,
-    border: "1px solid #ccc",
-  };
+  /* ── Raw API Tester ── */
+  async function runRaw() {
+    setRawLoading(true); setRawResponse(null);
+    try {
+      const body = rawMethod !== "GET" && rawMethod !== "DELETE" ? JSON.parse(rawBody) : undefined;
+      const data = await apiRequest(rawEndpoint, rawMethod, body);
+      setRawResponse(data);
+    } catch (e: any) {
+      setRawResponse({ error: e.message });
+    }
+    finally { setRawLoading(false); }
+  }
 
-  const buttonPrimary: React.CSSProperties = {
-    padding: "10px 16px",
-    backgroundColor: "#2563eb",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
-    marginRight: "10px",
-  };
+  /* ── Section nav ── */
+  function navigate(id: Section) { setSection(id); setSidebarOpen(false); }
 
-  const buttonSuccess: React.CSSProperties = {
-    padding: "10px 16px",
-    backgroundColor: "#16a34a",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
-    marginTop: "10px",
-  };
-
-  const buttonSecondary: React.CSSProperties = {
-    padding: "6px 12px",
-    backgroundColor: "#444",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
-  };
+  const sectionProps = { requireAuth, toast };
 
   return (
-    <div
-      style={{
-        padding: 40,
-        fontFamily: "monospace",
-        maxWidth: 900,
-        margin: "0 auto",
-      }}
-    >
-      <h1 style={{ marginBottom: 20 }}>Dev API Console</h1>
+    <div className="admin-root">
 
-      {/* LOGIN SECTION */}
-      <h3>Login</h3>
-      <div style={{ marginBottom: 20 }}>
-        <input
-          style={inputStyle}
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      {/* ── SIDEBAR BACKDROP (mobile) ── */}
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? " open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-        <input
-          style={inputStyle}
-          placeholder="Password"
-          type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+      {/* ── SIDEBAR ── */}
+      <aside className={`admin-sidebar${sidebarOpen ? " open" : ""}`}>
+        <div className="admin-sidebar-logo">
+          <div className="logo-badge">Admin Panel</div>
+          <h2>Dev Console</h2>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: 4 }}>
+            {fetching ? "⏳ Fetching data…" : "✅ Data loaded"}
+          </div>
+        </div>
 
-        <button
-          style={buttonSecondary}
-          onClick={() => setShowPassword(!showPassword)}
-        >
-          {showPassword ? "Hide" : "Show"}
-        </button>
+        <nav className="admin-nav">
+          <div className="nav-section-label">Navigation</div>
+          {NAV.map(({ id, icon, label }) => (
+            <button
+              key={id}
+              className={`admin-nav-item${section === id ? " active" : ""}`}
+              onClick={() => navigate(id as Section)}
+            >
+              <span className="nav-icon">{icon}</span> {label}
+            </button>
+          ))}
+        </nav>
 
-        <br />
+        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
+          {isLoggedIn ? (
+            <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={handleLogout}>🚪 Logout</button>
+          ) : (
+            <button className="btn btn-primary btn-sm" style={{ width: "100%" }} onClick={() => { setLoginMessage(undefined); setLoginOpen(true); }}>🔐 Login</button>
+          )}
+        </div>
+      </aside>
 
-        <button style={buttonPrimary} onClick={handleLogin}>
-          Login
-        </button>
-      </div>
+      {/* ── MAIN ── */}
+      <main className="admin-main">
 
-      <hr />
+        {/* ── TOPBAR ── */}
+        <header className="admin-topbar">
+          <div className="topbar-left">
+            <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>☰</button>
+            <span className="topbar-title">
+              {NAV.find(n => n.id === section)?.icon} {NAV.find(n => n.id === section)?.label}
+            </span>
+          </div>
+          <div className="topbar-right">
+            <div className={`auth-badge ${isLoggedIn ? "in" : "out"}`}>
+              {isLoggedIn ? "🟢 Logged in" : "🔴 Not logged in"}
+            </div>
+            {isLoggedIn ? (
+              <button className="btn btn-ghost btn-sm" onClick={handleLogout}>Logout</button>
+            ) : (
+              <button className="btn btn-primary btn-sm" onClick={() => { setLoginMessage(undefined); setLoginOpen(true); }}>🔐 Login</button>
+            )}
+          </div>
+        </header>
 
-      {/* API TESTER SECTION */}
-      <h3 style={{ marginTop: 20 }}>Custom API Tester</h3>
+        {/* ── CONTENT ── */}
+        <div className="admin-content">
 
-      <div style={{ marginBottom: 10 }}>
-        <input
-          style={{ ...inputStyle, width: 400 }}
-          value={endpoint}
-          onChange={(e) => setEndpoint(e.target.value)}
-        />
+          {/* Visitor Stats Bar — shown on every section */}
+          <div className="stats-bar" style={{ marginBottom: 24 }}>
+            {VISITOR_STATS.map((s) => (
+              <div className="stat-card" key={s.label}>
+                <div className="stat-icon">{s.icon}</div>
+                <div className="stat-value">{s.value}</div>
+                <div className="stat-label">{s.label}</div>
+                <div className="stat-change">{s.change}</div>
+              </div>
+            ))}
+          </div>
 
-        <select
-          style={inputStyle}
-          value={method}
-          onChange={(e) => setMethod(e.target.value)}
-        >
-          <option>GET</option>
-          <option>POST</option>
-          <option>PUT</option>
-          <option>DELETE</option>
-        </select>
-      </div>
+          {/* ── SECTIONS ── */}
+          {section === "profile" && <ProfileSection  {...sectionProps} />}
+          {section === "skills" && <SkillsSection   {...sectionProps} />}
+          {section === "projects" && <ProjectsSection {...sectionProps} />}
+          {section === "timeline" && <TimelineSection {...sectionProps} />}
+          {section === "chatbot" && <ChatbotSection  {...sectionProps} />}
 
-      {method !== "GET" && method !== "DELETE" && (
-        <textarea
-          rows={8}
-          cols={80}
-          style={{
-            ...inputStyle,
-            width: "100%",
-            fontFamily: "monospace",
-          }}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          {/* ── RAW API TESTER ── */}
+          {section === "rawapi" && (
+            <div>
+              <div className="section-header"><h2>⚡ Raw API Tester</h2><p>Send any request directly to the backend. Useful for debugging and testing endpoints.</p></div>
+              <div className="card">
+                <div className="card-title"><span>🔌</span> Request</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  <select className="form-select" style={{ width: 120, flex: "none" }} value={rawMethod} onChange={e => setRawMethod(e.target.value)}>
+                    {["GET", "POST", "PUT", "DELETE", "PATCH"].map(m => <option key={m}>{m}</option>)}
+                  </select>
+                  <input className="form-input" style={{ flex: 1, minWidth: 200 }} value={rawEndpoint} onChange={e => setRawEndpoint(e.target.value)} placeholder="/api/skills/" />
+                </div>
+                {rawMethod !== "GET" && rawMethod !== "DELETE" && (
+                  <div className="form-group">
+                    <label className="form-label">Request Body (JSON)</label>
+                    <textarea className="textarea-code" rows={8} value={rawBody} onChange={e => setRawBody(e.target.value)} />
+                  </div>
+                )}
+                <button className="btn btn-primary" disabled={rawLoading} onClick={runRaw}>{rawLoading ? "Sending…" : "▶ Send Request"}</button>
+              </div>
+              <div className="card">
+                <div className="card-title"><span>📥</span> Response</div>
+                <pre style={{ background: "var(--surface)", color: "#a8ff78", padding: 16, borderRadius: 8, fontSize: "0.8rem", overflowX: "auto", maxHeight: 500, fontFamily: "monospace" }}>
+                  {rawResponse ? JSON.stringify(rawResponse, null, 2) : "No response yet…"}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ── LOGIN MODAL ── */}
+      {loginOpen && (
+        <LoginModal
+          message={loginMessage}
+          onClose={() => { setLoginOpen(false); setPendingAction(null); }}
+          onSuccess={handleLoginSuccess}
         />
       )}
 
-      <br />
-
-      <button style={buttonSuccess} onClick={handleRequest}>
-        Send Request
-      </button>
-
-      <hr style={{ marginTop: 30 }} />
-
-      {/* RESPONSE SECTION */}
-      <h3>Response</h3>
-      <pre
-        style={{
-          background: "#111",
-          color: "#0f0",
-          padding: 20,
-          borderRadius: 8,
-          overflowX: "auto",
-        }}
-      >
-        {response
-          ? JSON.stringify(response, null, 2)
-          : "No response yet..."}
-      </pre>
+      {/* ── TOASTS ── */}
+      <div style={{ position: "fixed", bottom: 24, right: 24, display: "flex", flexDirection: "column", gap: 8, zIndex: 2000 }}>
+        {toasts.map(t => (
+          <div key={t.id} className={`toast toast-${t.type === "error" ? "error" : t.type === "info" ? "info" : "success"}`}>
+            {t.type === "error" ? "❌" : t.type === "info" ? "ℹ️" : "✅"} {t.msg}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

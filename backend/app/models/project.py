@@ -3,6 +3,7 @@ from typing import Optional, List
 
 class ProjectBase(BaseModel):
     name: str
+    description: str
     category_id: str
     order: int = 0
     difficulty: int = Field(..., ge=1, le=3)
@@ -20,6 +21,7 @@ class ProjectCreate(ProjectBase):
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     category_id: Optional[str] = None
     order: Optional[int] = None
     difficulty: Optional[int] = Field(None, ge=1, le=3)

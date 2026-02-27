@@ -5,7 +5,7 @@ from bson import ObjectId
 import os, uuid
 from fastapi import Depends
 from app.core.security import get_current_admin
-
+# added description field to the project model now have to update code accordingly
 public_router = APIRouter(prefix="/api/projects", tags=["projects"])
 admin_router = APIRouter(prefix="/api/projects", tags=["projects"], dependencies=[Depends(get_current_admin)])
 UPLOAD_DIR = "static/uploads/projects"
@@ -72,6 +72,7 @@ async def get_projects():
 @admin_router.post("/")
 async def add_project(
     name: str = Form(...),
+    description = Form(...),
     category_id: str = Form(...),
     order: int | None = Form(None),
     difficulty: int = Form(...),
@@ -92,6 +93,7 @@ async def add_project(
 
     data = {
         "name": name,
+        "description": description,
         "category_id": category_id,
         "order": order,
         "difficulty": difficulty,
