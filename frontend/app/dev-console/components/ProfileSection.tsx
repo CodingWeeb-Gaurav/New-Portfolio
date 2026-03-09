@@ -46,53 +46,66 @@ export default function ProfileSection({ requireAuth, toast }: Props) {
         const cachedImg = getFromStorage<{ image_url?: string; enabled?: boolean }>("profileImage");
         if (cachedImg) setImageInfo(cachedImg);
 
-        // Refresh from backend
-        apiRequest("/profile/data").then((d) => { if (d) setData({ ...BLANK_DATA, ...d }); }).catch(() => { });
-        apiRequest("/profile/aboutme").then((d) => { if (d?.content !== undefined) setAboutMe(d.content); }).catch(() => { });
-        apiRequest("/profile/image").then((d) => { if (d) setImageInfo(d); }).catch(() => { });
+        // Refresh from backend - only override local state if no temp profile exists
+        apiRequest("/profile/data").then((d) => {
+            if (d && !getFromStorage<boolean>("has_temp_profile")) {
+                setData({ ...BLANK_DATA, ...d });
+                saveToStorage("profileData", d);
+            }
+        }).catch(() => { });
+
+        apiRequest("/profile/aboutme").then((d) => {
+            if (d?.content !== undefined && !getFromStorage<boolean>("has_temp_profile")) {
+                setAboutMe(d.content);
+                saveToStorage("aboutMe", d.content);
+            }
+        }).catch(() => { });
+
+        apiRequest("/profile/image").then((d) => {
+            if (d && !getFromStorage<boolean>("has_temp_profile")) {
+                setImageInfo(d);
+                saveToStorage("profileImage", d);
+            }
+        }).catch(() => { });
     }, []);
 
     /* ── apply (local storage) ── */
     function applyChanges() {
         saveToStorage("profileData", data);
         saveToStorage("aboutMe", aboutMe);
-        if (imageInfo) saveToStorage("profileImage", imageInfo);
+        saveToStorage("has_temp_profile", true);
+        if (imageInfo) {
+            // Map the local File object to a temporary URL so HomePage can render it instantly
+            const previewUrl = imageFile ? URL.createObjectURL(imageFile) : imageInfo.image_url;
+            saveToStorage("profileImage", { ...imageInfo, image_url: previewUrl });
+        }
         toast("Changes applied to local storage! Portfolio preview updated.", "success");
     }
 
-    /* ── submit profile data ── */
-    async function submitProfileData() {
+    /* ── submit all changes ── */
+    async function submitAll() {
         setLoading(true);
         try {
+            // 1. Profile Data
             await apiRequest("/profile/data", "PUT", data);
             saveToStorage("profileData", data);
-            toast("Profile data saved to backend!", "success");
-        } catch (e) { toast(e instanceof Error ? e.message : "Failed", "error"); }
-        finally { setLoading(false); }
-    }
 
-    /* ── submit about me ── */
-    async function submitAboutMe() {
-        setLoading(true);
-        try {
+            // 2. About Me
             await apiRequest("/profile/aboutme", "PUT", { content: aboutMe });
             saveToStorage("aboutMe", aboutMe);
-            toast("About Me saved!", "success");
-        } catch (e) { toast(e instanceof Error ? e.message : "Failed", "error"); }
-        finally { setLoading(false); }
-    }
 
-    /* ── submit profile image ── */
-    async function submitImage() {
-        if (!imageFile) { toast("Select an image first", "error"); return; }
-        setLoading(true);
-        try {
-            const fd = new FormData(); fd.append("file", imageFile);
-            const res = await apiFormRequest("/profile/image", "PUT", fd);
-            const updated = { image_url: res.image_url, enabled: true };
-            setImageInfo(updated); saveToStorage("profileImage", updated);
-            toast("Profile image uploaded!", "success");
-        } catch (e) { toast(e instanceof Error ? e.message : "Failed", "error"); }
+            // 3. Image
+            if (imageFile) {
+                const fd = new FormData(); fd.append("file", imageFile);
+                const res = await apiFormRequest("/profile/image", "PUT", fd);
+                const updated = { image_url: res.image_url, enabled: true };
+                setImageInfo(updated); saveToStorage("profileImage", updated);
+                setImageFile(null); // Clear pending file once uploaded
+            }
+
+            saveToStorage("has_temp_profile", false);
+            toast("All profile changes saved to backend!", "success");
+        } catch (e) { toast(e instanceof Error ? e.message : "Failed saving to backend", "error"); }
         finally { setLoading(false); }
     }
 
@@ -152,7 +165,7 @@ export default function ProfileSection({ requireAuth, toast }: Props) {
             <div className="action-strip">
                 <span className="action-strip-text">📋 Edit your profile below. Apply previews locally; Submit saves to the backend.</span>
                 <button className="btn btn-warning btn-sm" onClick={applyChanges}>⚡ Apply (Preview)</button>
-                <button className="btn btn-success btn-sm" disabled={loading} onClick={() => requireAuth(submitProfileData)}>
+                <button className="btn btn-success btn-sm" disabled={loading} onClick={() => requireAuth(submitAll)}>
                     {loading ? "Saving…" : "✅ Submit All"}
                 </button>
             </div>
@@ -259,8 +272,8 @@ export default function ProfileSection({ requireAuth, toast }: Props) {
                     <textarea className="textarea-code" rows={20} value={aboutMe} onChange={(e) => setAboutMe(e.target.value)} placeholder="# About Me&#10;Write your about me in Markdown..." />
                     <div className="btn-group">
                         <button className="btn btn-warning" onClick={applyChanges}>⚡ Apply</button>
-                        <button className="btn btn-success" disabled={loading} onClick={() => requireAuth(submitAboutMe)}>
-                            {loading ? "Saving…" : "✅ Submit"}
+                        <button className="btn btn-success" disabled={loading} onClick={() => requireAuth(submitAll)}>
+                            {loading ? "Saving…" : "✅ Submit All"}
                         </button>
                     </div>
                 </div>
@@ -281,16 +294,13 @@ export default function ProfileSection({ requireAuth, toast }: Props) {
                         </div>
                         <div style={{ flex: 1 }}>
                             <div className="form-group">
-                                <label className="form-label">Upload New Image</label>
+                                <label className="form-label">Choose New Image</label>
                                 <input className="form-input" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
-                                <div className="form-hint">Replaces the current profile image.</div>
+                                <div className="form-hint">Image is previewed locally. Click "Apply" to preview in portfolio, or "Submit All" to save permanently to the backend.</div>
                             </div>
                             <div className="btn-group">
-                                <button className="btn btn-success" disabled={loading || !imageFile} onClick={() => requireAuth(submitImage)}>
-                                    {loading ? "Uploading…" : "⬆ Upload"}
-                                </button>
                                 {imageInfo.image_url && (
-                                    <button className="btn btn-danger" disabled={loading} onClick={() => requireAuth(deleteImage)}>🗑 Delete Image</button>
+                                    <button className="btn btn-danger" disabled={loading} onClick={() => requireAuth(deleteImage)}>🗑 Delete Image from Backend</button>
                                 )}
                             </div>
                         </div>

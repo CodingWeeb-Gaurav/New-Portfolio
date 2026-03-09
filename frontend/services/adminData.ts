@@ -9,6 +9,11 @@ export const STORAGE_KEYS = {
     aboutMe: "portfolio_aboutme",
     profileImage: "portfolio_profile_image",
     profileStats: "portfolio_profile_stats",
+    temp_timelines: "portfolio_temp_timelines",
+    temp_skills: "portfolio_temp_skills",
+    temp_projects: "portfolio_temp_projects",
+    temp_projectCategories: "portfolio_temp_projectCategories",
+    has_temp_profile: "portfolio_has_temp_profile",
 } as const;
 
 type StorageKey = keyof typeof STORAGE_KEYS;

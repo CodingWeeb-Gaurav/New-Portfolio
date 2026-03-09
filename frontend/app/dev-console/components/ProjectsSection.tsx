@@ -8,20 +8,20 @@ interface Project { id: string; name: string; description: string, category_id: 
 
 // Temporary interfaces for UI-only items
 interface TempCategory extends Omit<Category, 'id' | 'order'> {
-  id?: string;
-  order: number | string;
-  isTemp?: boolean;
-  imageFile?: File | null;
-  image_preview?: string;
+    id?: string;
+    order: number | string;
+    isTemp?: boolean;
+    imageFile?: File | null;
+    image_preview?: string;
 }
 
 interface TempProject extends Omit<Project, 'id' | 'order'> {
-  id?: string;
-  order: number | string;
-  isTemp?: boolean;
-  imageFile?: File | null;
-  image_preview?: string;
-  category_id: string; // Make required
+    id?: string;
+    order: number | string;
+    isTemp?: boolean;
+    imageFile?: File | null;
+    image_preview?: string;
+    category_id: string; // Make required
 }
 
 interface Props { requireAuth: (cb: () => void) => void; toast: (msg: string, type?: string) => void; }
@@ -37,17 +37,17 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
     const [tempCategories, setTempCategories] = useState<TempCategory[]>([]);
     const [tempProjects, setTempProjects] = useState<TempProject[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Form states
     const [catForm, setCatForm] = useState({ ...BLANK_CAT });
     const [projForm, setProjForm] = useState({ ...BLANK_PROJ });
-    
+
     // Edit states
     const [editCatId, setEditCatId] = useState<string | null>(null);
     const [editProjId, setEditProjId] = useState<string | null>(null);
     const [editTempCatId, setEditTempCatId] = useState<string | null>(null);
     const [editTempProjId, setEditTempProjId] = useState<string | null>(null);
-    
+
     // Show add forms
     const [showAddCat, setShowAddCat] = useState(false);
     const [showAddProj, setShowAddProj] = useState(false);
@@ -55,23 +55,46 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
     const fetchAll = useCallback(async () => {
         try {
             const [cats, projs] = await Promise.all([
-                apiRequest("/api/project-categories/"), 
+                apiRequest("/api/project-categories/"),
                 apiRequest("/api/projects/")
             ]);
-            setCategories(cats); 
+            setCategories(cats);
             setProjects(projs);
-            saveToStorage("projectCategories", cats); 
-            saveToStorage("projects", projs);
+
+            setTempCategories((currentTemps) => {
+                if (currentTemps.length === 0) saveToStorage("projectCategories", cats);
+                return currentTemps;
+            });
+            setTempProjects((currentTemps) => {
+                if (currentTemps.length === 0) saveToStorage("projects", projs);
+                return currentTemps;
+            });
         } catch { /* silent */ }
     }, []);
 
     useEffect(() => {
-        const cc = getFromStorage<Category[]>("projectCategories"); 
+        const cc = getFromStorage<Category[]>("projectCategories");
         if (cc) setCategories(cc);
-        const pp = getFromStorage<Project[]>("projects"); 
+        const tc = getFromStorage<TempCategory[]>("temp_projectCategories");
+        if (tc) setTempCategories(tc);
+
+        const pp = getFromStorage<Project[]>("projects");
         if (pp) setProjects(pp);
+        const tp = getFromStorage<TempProject[]>("temp_projects");
+        if (tp) setTempProjects(tp);
+
         fetchAll();
     }, [fetchAll]);
+
+    useEffect(() => {
+        if (tempCategories.length > 0) saveToStorage("temp_projectCategories", tempCategories);
+        else saveToStorage("temp_projectCategories", []);
+    }, [tempCategories]);
+
+    useEffect(() => {
+        if (tempProjects.length > 0) saveToStorage("temp_projects", tempProjects);
+        else saveToStorage("temp_projects", []);
+    }, [tempProjects]);
 
     // Generate temporary ID
     const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -98,7 +121,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                     fd.append("order", String(tempCat.order));
                     fd.append("enabled", String(tempCat.enabled));
                     if (tempCat.imageFile) fd.append("image", tempCat.imageFile);
-                    
+
                     await apiFormRequest("/api/project-categories/", "POST", fd);
                 }
             }
@@ -108,7 +131,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 if (tempProj.name && tempProj.category_id) {
                     const fd = new FormData();
                     fd.append("name", tempProj.name);
-                    fd.append("description", tempProj.description); 
+                    fd.append("description", tempProj.description);
                     fd.append("category_id", tempProj.category_id);
                     fd.append("difficulty", String(tempProj.difficulty));
                     fd.append("date", tempProj.date);
@@ -118,18 +141,18 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                     if (tempProj.demo_url) fd.append("demo_url", tempProj.demo_url);
                     if (tempProj.skills) fd.append("skills", Array.isArray(tempProj.skills) ? tempProj.skills.join(',') : tempProj.skills);
                     if (tempProj.imageFile) fd.append("image", tempProj.imageFile);
-                    
+
                     await apiFormRequest("/api/projects/", "POST", fd);
                 }
             }
 
             // Refresh from backend
             await fetchAll();
-            
+
             // Clear temp items
             setTempCategories([]);
             setTempProjects([]);
-            
+
             toast("All changes saved to backend!", "success");
         } catch (e) {
             toast(e instanceof Error ? e.message : "Failed to save changes", "error");
@@ -140,9 +163,9 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
 
     /* ── TEMPORARY CATEGORY OPERATIONS (UI only) ── */
     function addTempCategory() {
-        if (!catForm.name) { 
-            toast("Name required", "error"); 
-            return; 
+        if (!catForm.name) {
+            toast("Name required", "error");
+            return;
         }
 
         const imagePreview = catForm.image ? URL.createObjectURL(catForm.image) : undefined;
@@ -172,7 +195,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
 
         const imagePreview = catForm.image ? URL.createObjectURL(catForm.image) : undefined;
 
-        setTempCategories(tempCategories.map(c => 
+        setTempCategories(tempCategories.map(c =>
             c.id === id ? {
                 ...c,
                 name: catForm.name,
@@ -211,9 +234,9 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
 
     /* ── TEMPORARY PROJECT OPERATIONS (UI only) ── */
     function addTempProject() {
-        if (!projForm.name || !projForm.category_id || !projForm.description) { 
-            toast("Name, description and category required", "error"); 
-            return; 
+        if (!projForm.name || !projForm.category_id || !projForm.description) {
+            toast("Name, description and category required", "error");
+            return;
         }
 
         const imagePreview = projForm.image ? URL.createObjectURL(projForm.image) : undefined;
@@ -221,7 +244,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
         const newTempProj: TempProject = {
             id: generateTempId(),
             name: projForm.name,
-            description: projForm.description,  
+            description: projForm.description,
             category_id: projForm.category_id,
             order: projForm.order || 0,
             difficulty: Number(projForm.difficulty),
@@ -249,7 +272,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
 
         const imagePreview = projForm.image ? URL.createObjectURL(projForm.image) : undefined;
 
-        setTempProjects(tempProjects.map(p => 
+        setTempProjects(tempProjects.map(p =>
             p.id === id ? {
                 ...p,
                 name: projForm.name,
@@ -310,14 +333,14 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
             fd.append("enabled", String(catForm.enabled));
             if (catForm.image) fd.append("image", catForm.image);
             await apiFormRequest("/api/project-categories/", "POST", fd);
-            setCatForm({ ...BLANK_CAT }); 
+            setCatForm({ ...BLANK_CAT });
             setShowAddCat(false);
-            await fetchAll(); 
+            await fetchAll();
             toast("Category added to backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -330,14 +353,14 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 order: catForm.order ? Number(catForm.order) : undefined,
                 enabled: catForm.enabled,
             });
-            setEditCatId(null); 
+            setEditCatId(null);
             setCatForm({ ...BLANK_CAT });
-            await fetchAll(); 
+            await fetchAll();
             toast("Category updated in backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -346,20 +369,20 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
         setLoading(true);
         try {
             await apiRequest(`/api/project-categories/${id}`, "DELETE");
-            await fetchAll(); 
+            await fetchAll();
             toast("Category deleted from backend", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
     /* ── BACKEND PROJECT OPERATIONS ── */
     async function addProject() {
-        if (!projForm.name || !projForm.category_id || !projForm.description ) { 
-            toast("Name, description and category required", "error"); 
-            return; 
+        if (!projForm.name || !projForm.category_id || !projForm.description) {
+            toast("Name, description and category required", "error");
+            return;
         }
         setLoading(true);
         try {
@@ -376,14 +399,14 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
             if (projForm.skills) fd.append("skills", projForm.skills);
             if (projForm.image) fd.append("image", projForm.image);
             await apiFormRequest("/api/projects/", "POST", fd);
-            setProjForm({ ...BLANK_PROJ, category_id: projForm.category_id }); 
+            setProjForm({ ...BLANK_PROJ, category_id: projForm.category_id });
             setShowAddProj(false);
-            await fetchAll(); 
+            await fetchAll();
             toast("Project added to backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -402,14 +425,14 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 enabled: projForm.enabled,
                 order: projForm.order ? Number(projForm.order) : undefined,
             });
-            setEditProjId(null); 
+            setEditProjId(null);
             setProjForm({ ...BLANK_PROJ });
-            await fetchAll(); 
+            await fetchAll();
             toast("Project updated in backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -418,43 +441,43 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
         setLoading(true);
         try {
             await apiRequest(`/api/projects/${id}`, "DELETE");
-            await fetchAll(); 
+            await fetchAll();
             toast("Project deleted from backend", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
     /* ── EDIT HELPERS ── */
     function startEditCat(c: Category) {
-        setEditCatId(c.id); 
+        setEditCatId(c.id);
         setShowAddCat(false);
-        setCatForm({ 
-            name: c.name, 
-            description: c.description || "", 
-            order: String(c.order), 
-            enabled: c.enabled, 
-            image: null 
+        setCatForm({
+            name: c.name,
+            description: c.description || "",
+            order: String(c.order),
+            enabled: c.enabled,
+            image: null
         });
     }
 
     function startEditProj(p: Project) {
-        setEditProjId(p.id); 
+        setEditProjId(p.id);
         setShowAddProj(false);
-        setProjForm({ 
-            name: p.name, 
+        setProjForm({
+            name: p.name,
             description: p.description,
-            category_id: p.category_id, 
-            order: String(p.order), 
-            difficulty: String(p.difficulty), 
-            date: p.date, 
-            github_url: p.github_url || "", 
-            demo_url: p.demo_url || "", 
-            skills: p.skills.join(", "), 
-            enabled: p.enabled, 
-            image: null 
+            category_id: p.category_id,
+            order: String(p.order),
+            difficulty: String(p.difficulty),
+            date: p.date,
+            github_url: p.github_url || "",
+            demo_url: p.demo_url || "",
+            skills: p.skills.join(", "),
+            enabled: p.enabled,
+            image: null
         });
     }
 
@@ -464,7 +487,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
         const tempCat = tempCategories.find(c => c.id === id);
         return tempCat?.name || id;
     };
-    
+
     const diffLabel = (d: number) => ["", "⭐ Easy", "⭐⭐ Medium", "⭐⭐⭐ Hard"][d] || String(d);
 
     /* ── FORM RENDERERS ── */
@@ -499,10 +522,10 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 <button className="btn btn-success" disabled={loading} onClick={() => onSubmit()}>
                     {loading ? "Saving…" : label}
                 </button>
-                <button className="btn btn-ghost" onClick={() => { 
-                    setEditCatId(null); 
+                <button className="btn btn-ghost" onClick={() => {
+                    setEditCatId(null);
                     setEditTempCatId(null);
-                    setShowAddCat(false); 
+                    setShowAddCat(false);
                     setCatForm({ ...BLANK_CAT });
                 }}>
                     Cancel
@@ -529,11 +552,11 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
             </div>
             <div className="form-group">
                 <label className="form-label">Description *</label>
-                <textarea 
-                    className="form-textarea" 
-                    rows={3} 
-                    value={projForm.description} 
-                    onChange={e => setProjForm(f => ({ ...f, description: e.target.value }))} 
+                <textarea
+                    className="form-textarea"
+                    rows={3}
+                    value={projForm.description}
+                    onChange={e => setProjForm(f => ({ ...f, description: e.target.value }))}
                     placeholder="Describe the project, its purpose, technologies used, etc."
                 />
             </div>
@@ -582,10 +605,10 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 <button className="btn btn-success" disabled={loading} onClick={() => onSubmit()}>
                     {loading ? "Saving…" : label}
                 </button>
-                <button className="btn btn-ghost" onClick={() => { 
-                    setEditProjId(null); 
+                <button className="btn btn-ghost" onClick={() => {
+                    setEditProjId(null);
                     setEditTempProjId(null);
-                    setShowAddProj(false); 
+                    setShowAddProj(false);
                     setProjForm({ ...BLANK_PROJ });
                 }}>
                     Cancel
@@ -611,16 +634,16 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                 <span className="action-strip-text">
                     📋 Edit below. Add to preview, Apply to localStorage, Submit to backend.
                 </span>
-                <button 
-                    className="btn btn-warning btn-sm" 
+                <button
+                    className="btn btn-warning btn-sm"
                     onClick={applyPreview}
                     disabled={loading}
                 >
                     ⚡ Apply (Preview)
                 </button>
-                <button 
-                    className="btn btn-success btn-sm" 
-                    disabled={loading || totalPending === 0} 
+                <button
+                    className="btn btn-success btn-sm"
+                    disabled={loading || totalPending === 0}
                     onClick={() => requireAuth(() => submitAll())}
                 >
                     {loading ? "Saving…" : `✅ Submit All${totalPending > 0 ? ` (${totalPending} pending)` : ''}`}
@@ -629,14 +652,14 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
 
             {/* Pending items indicator */}
             {totalPending > 0 && (
-                <div className="info-message" style={{ 
-                    padding: '8px 16px', 
-                    marginBottom: '16px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '8px', 
-                    color: '#92400e' 
+                <div className="info-message" style={{
+                    padding: '8px 16px',
+                    marginBottom: '16px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '8px',
+                    color: '#92400e'
                 }}>
-                    ⏳ You have {totalPending} unsaved item{totalPending > 1 ? 's' : ''} in preview. 
+                    ⏳ You have {totalPending} unsaved item{totalPending > 1 ? 's' : ''} in preview.
                     Click "Apply" to see in portfolio or "Submit All" to save to backend.
                 </div>
             )}
@@ -654,26 +677,26 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
             {tab === "categories" && (
                 <div>
                     <div style={{ marginBottom: 12, display: 'flex', gap: '8px' }}>
-                        <button 
-                            className="btn btn-primary btn-sm" 
-                            onClick={() => { 
-                                setShowAddCat(true); 
-                                setEditCatId(null); 
+                        <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                                setShowAddCat(true);
+                                setEditCatId(null);
                                 setEditTempCatId(null);
-                                setCatForm({ ...BLANK_CAT }); 
+                                setCatForm({ ...BLANK_CAT });
                             }}
                         >
                             + Add Category (Preview)
                         </button>
                     </div>
-                    
+
                     {showAddCat && renderCategoryForm(addTempCategory, "➕ Add to Preview", true)}
 
                     <div className="items-list">
                         {allCategories.map(c => {
                             const isTemp = 'isTemp' in c && c.isTemp;
                             const tempCat = isTemp ? c as TempCategory : null;
-                            
+
                             return (
                                 <div key={isTemp ? tempCat?.id : (c as Category).id}>
                                     <div className="item-row" style={isTemp ? { backgroundColor: '#fef3c7', borderRadius: '4px', padding: '8px' } : {}}>
@@ -683,8 +706,8 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                     <img src={tempCat.image_preview} alt={c.name} style={{ maxWidth: '40px', maxHeight: '40px' }} />
                                                 ) : "📁"
                                             ) : (
-                                                (c as Category).image_link ? 
-                                                    <img src={`${BASE_URL}/static${(c as Category).image_link}`} alt={c.name} /> : 
+                                                (c as Category).image_link ?
+                                                    <img src={`${BASE_URL}/static${(c as Category).image_link}`} alt={c.name} /> :
                                                     "📁"
                                             )}
                                         </div>
@@ -694,17 +717,17 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                 {isTemp && <span className="badge badge-warning" style={{ marginLeft: '8px' }}>Preview</span>}
                                             </div>
                                             <div className="item-sub">
-                                                Order #{c.order} — {allProjects.filter(p => p.category_id === c.id).length} projects — 
+                                                Order #{c.order} — {allProjects.filter(p => p.category_id === c.id).length} projects —
                                                 {c.enabled ? <span className="badge badge-green">on</span> : <span className="badge badge-red">off</span>}
                                             </div>
                                         </div>
                                         <div className="item-actions">
                                             {isTemp ? (
                                                 <>
-                                                    <button 
-                                                        className="btn btn-ghost btn-sm" 
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
                                                         onClick={() => {
-                                                            if(tempCat){
+                                                            if (tempCat) {
                                                                 startEditTempCat(tempCat);
                                                                 setShowAddCat(false);
                                                             }
@@ -713,11 +736,11 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                     >
                                                         ✏️
                                                     </button>
-                                                    <button 
-                                                        className="btn btn-danger btn-sm" 
-                                                        disabled={loading || !tempCat} 
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        disabled={loading || !tempCat}
                                                         onClick={() => {
-                                                            if (tempCat?.id){
+                                                            if (tempCat?.id) {
                                                                 deleteTempCategory(tempCat.id);
                                                             }
                                                         }}
@@ -727,16 +750,16 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button 
-                                                        className="btn btn-ghost btn-sm" 
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
                                                         onClick={() => startEditCat(c as Category)}
                                                         disabled={loading}
                                                     >
                                                         ✏️
                                                     </button>
-                                                    <button 
-                                                        className="btn btn-danger btn-sm" 
-                                                        disabled={loading} 
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        disabled={loading}
                                                         onClick={() => requireAuth(() => deleteCategory((c as Category).id))}
                                                     >
                                                         🗑
@@ -745,7 +768,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     {/* Edit forms */}
                                     {!isTemp && editCatId === (c as Category).id && renderCategoryForm(() => updateCategory((c as Category).id), "✅ Save to Backend")}
                                     {isTemp && editTempCatId === tempCat?.id && renderCategoryForm(() => updateTempCategory(tempCat.id!), "💾 Update Preview", true)}
@@ -766,29 +789,29 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
             {tab === "projects" && (
                 <div>
                     <div style={{ marginBottom: 12 }}>
-                        <button 
-                            className="btn btn-primary btn-sm" 
-                            onClick={() => { 
-                                setShowAddProj(true); 
-                                setEditProjId(null); 
+                        <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                                setShowAddProj(true);
+                                setEditProjId(null);
                                 setEditTempProjId(null);
-                                setProjForm({ ...BLANK_PROJ }); 
+                                setProjForm({ ...BLANK_PROJ });
                             }}
                         >
                             + Add Project (Preview)
                         </button>
                     </div>
-                    
+
                     {showAddProj && renderProjectForm(addTempProject, "➕ Add to Preview", true)}
 
                     {categories.map(cat => {
                         const catProjs = allProjects.filter(p => p.category_id === cat.id);
                         if (catProjs.length === 0) return null;
-                        
+
                         return (
                             <div key={cat.id} className="card">
                                 <div className="card-title">
-                                    <span>📁</span> {cat.name} 
+                                    <span>📁</span> {cat.name}
                                     <span className="badge badge-purple">{catProjs.length}</span>
                                     {tempProjects.filter(p => p.category_id === cat.id).length > 0 && (
                                         <span className="badge badge-warning" style={{ marginLeft: '8px' }}>
@@ -800,7 +823,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                     {catProjs.map(p => {
                                         const isTemp = 'isTemp' in p && p.isTemp;
                                         const tempProj = isTemp ? p as TempProject : null;
-                                        
+
                                         return (
                                             <div key={isTemp ? tempProj?.id : (p as Project).id}>
                                                 <div className="item-row" style={isTemp ? { backgroundColor: '#fef3c7', borderRadius: '4px', padding: '8px' } : {}}>
@@ -810,8 +833,8 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                                 <img src={tempProj.image_preview} alt={p.name} style={{ maxWidth: '40px', maxHeight: '40px' }} />
                                                             ) : "🚀"
                                                         ) : (
-                                                            (p as Project).image_link ? 
-                                                                <img src={`${BASE_URL}/static${(p as Project).image_link}`} alt={p.name} /> : 
+                                                            (p as Project).image_link ?
+                                                                <img src={`${BASE_URL}/static${(p as Project).image_link}`} alt={p.name} /> :
                                                                 "🚀"
                                                         )}
                                                     </div>
@@ -821,17 +844,17 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                             {isTemp && <span className="badge badge-warning" style={{ marginLeft: '8px' }}>Preview</span>}
                                                         </div>
                                                         <div className="item-sub">
-                                                            {p.date} · {diffLabel(p.difficulty)} · {catName(p.category_id)} · 
+                                                            {p.date} · {diffLabel(p.difficulty)} · {catName(p.category_id)} ·
                                                             {p.enabled ? <span className="badge badge-green">on</span> : <span className="badge badge-red">off</span>}
                                                         </div>
                                                     </div>
                                                     <div className="item-actions">
                                                         {isTemp ? (
                                                             <>
-                                                                <button 
-                                                                    className="btn btn-ghost btn-sm" 
+                                                                <button
+                                                                    className="btn btn-ghost btn-sm"
                                                                     onClick={() => {
-                                                                        if(tempProj){
+                                                                        if (tempProj) {
                                                                             startEditTempProj(tempProj);
                                                                             setShowAddProj(false);
                                                                         }
@@ -840,11 +863,11 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                                 >
                                                                     ✏️
                                                                 </button>
-                                                                <button 
-                                                                    className="btn btn-danger btn-sm" 
-                                                                    disabled={loading || !tempProj} 
+                                                                <button
+                                                                    className="btn btn-danger btn-sm"
+                                                                    disabled={loading || !tempProj}
                                                                     onClick={() => {
-                                                                        if (tempProj?.id){
+                                                                        if (tempProj?.id) {
                                                                             deleteTempProject(tempProj.id);
                                                                         }
                                                                     }}
@@ -854,16 +877,16 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <button 
-                                                                    className="btn btn-ghost btn-sm" 
+                                                                <button
+                                                                    className="btn btn-ghost btn-sm"
                                                                     onClick={() => startEditProj(p as Project)}
                                                                     disabled={loading}
                                                                 >
                                                                     ✏️
                                                                 </button>
-                                                                <button 
-                                                                    className="btn btn-danger btn-sm" 
-                                                                    disabled={loading} 
+                                                                <button
+                                                                    className="btn btn-danger btn-sm"
+                                                                    disabled={loading}
                                                                     onClick={() => requireAuth(() => deleteProject((p as Project).id))}
                                                                 >
                                                                     🗑
@@ -872,7 +895,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                                                         )}
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Edit forms */}
                                                 {!isTemp && editProjId === (p as Project).id && renderProjectForm(() => updateProject((p as Project).id), "✅ Save to Backend")}
                                                 {isTemp && editTempProjId === tempProj?.id && renderProjectForm(() => updateTempProject(tempProj.id!), "💾 Update Preview", true)}
@@ -883,7 +906,7 @@ export default function ProjectsSection({ requireAuth, toast }: Props) {
                             </div>
                         );
                     })}
-                    
+
                     {allProjects.length === 0 && (
                         <div className="empty-state">
                             <div className="empty-icon">📭</div>

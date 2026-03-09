@@ -1,0 +1,198 @@
+/* ============================
+   Global Portfolio Styles
+   Applied to ALL 5 pages
+   ============================ */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;600;700;900&display=swap');
+
+:root {
+    --nav-height: 64px;
+    --accent: #a78bfa;
+    /* violet-400 */
+    --accent2: #f472b6;
+    /* pink-400 */
+    --accent3: #38bdf8;
+    /* sky-400 */
+    --surface: rgba(15, 15, 30, 0.65);
+    --surface-2: rgba(20, 20, 40, 0.75);
+    --border: rgba(255, 255, 255, 0.08);
+    --text-main: #f0f0ff;
+    --text-dim: rgba(200, 200, 240, 0.6);
+    --radius: 16px;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    --transition: 0.3s ease;
+}
+
+/* ── Full-screen wrapper that holds the bg image ── */
+.portfolio-wrapper {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    font-family: 'Inter', 'Outfit', sans-serif;
+}
+
+/* ── Sliding background image ── */
+.portfolio-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/bg8.jpg');
+    background-repeat: no-repeat;
+    background-size: 250% 250%;
+    background-position: 50% 50%;
+    transition: background-position 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+}
+
+/* ── Dark overlay for readability ── */
+.portfolio-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 20, 0.55);
+    backdrop-filter: brightness(0.9);
+    z-index: 1;
+}
+
+/* ── Scrollable page content area (above nav) ── */
+.portfolio-content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: var(--nav-height);
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+    color: var(--text-main);
+}
+
+.portfolio-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.portfolio-content::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 4px;
+}
+
+/* ── Shared page container ── */
+.page-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 6rem;
+    min-height: calc(100vh - var(--nav-height));
+}
+
+/* ── Glass card ── */
+.glass-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+}
+
+/* ── Section heading ── */
+.section-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+}
+
+.section-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    margin-bottom: 2.5rem;
+}
+
+/* ── Gradient badge ── */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+}
+
+/* ── Responsive grid helpers ── */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+/* ── Loading / empty state ── */
+.empty-state {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 3rem 1rem;
+}
+
+/* Welcome screen .welcome-root override */
+.welcome-root {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: 0.25em;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-greeting {
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    letter-spacing: 0.15em;
+    background: linear-gradient(white, #38495a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 300;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+}
+
+/* ── Responsive adjustments ── */
+@media (max-width: 640px) {
+    .page-container {
+        padding: 2rem 1rem 5rem;
+    }
+
+    .glass-card {
+        padding: 1.25rem;
+    }
+}

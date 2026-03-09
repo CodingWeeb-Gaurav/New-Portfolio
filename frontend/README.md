@@ -8,7 +8,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
-npm run dev
+npm run dev --> for development
+# For production build
+npm run build -> on vercel deployment it happens automatically
+npm run start
 # or
 yarn dev
 # or

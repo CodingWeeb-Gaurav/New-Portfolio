@@ -1,0 +1,48 @@
+.animated-button {
+  position: relative;
+  font-size: 18px;
+  padding: 12px 28px;
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #ffffff88;
+  border-radius: 50px;
+  cursor: not-allowed;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 0.3s ease-in-out;
+}
+
+.animated-button.ready {
+  cursor: pointer;
+  color: #fff;
+  border-color: #0ff;
+  box-shadow: 0 0 20px #0ff;
+}
+
+.animated-button .progress-border {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  border: 2px solid #00ffff88;
+  border-radius: 50px;
+  transform: scaleX(0);
+  transform-origin: left;
+  z-index: -1;
+  animation: fill-border 4s linear forwards;
+}
+
+.animated-button.ready .progress-border {
+  display: none;
+}
+
+@keyframes fill-border {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

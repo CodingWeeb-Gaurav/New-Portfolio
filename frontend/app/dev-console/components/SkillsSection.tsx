@@ -57,7 +57,10 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
     try {
       const data = await apiRequest("/api/skills/");
       setSkills(data);
-      saveToStorage("skills", data);
+      setTempSkills((currentTemps) => {
+        if (currentTemps.length === 0) saveToStorage("skills", data);
+        return currentTemps;
+      });
     } catch { }
   }, []);
 
@@ -65,10 +68,17 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
     // Load from localStorage first for instant display
     const cached = getFromStorage<Skill[]>("skills");
     if (cached) setSkills(cached);
-    
+    const cachedTemps = getFromStorage<TempSkill[]>("temp_skills");
+    if (cachedTemps) setTempSkills(cachedTemps);
+
     // Refresh from backend
     fetchSkills();
   }, [fetchSkills]);
+
+  useEffect(() => {
+    if (tempSkills.length > 0) saveToStorage("temp_skills", tempSkills);
+    else saveToStorage("temp_skills", []);
+  }, [tempSkills]);
 
   // Generate a temporary ID for UI-only skills
   const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -104,10 +114,10 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
       // Submit any edits to existing skills (you might need to track edited skills)
       // For now, we'll refetch from backend
       await fetchSkills();
-      
+
       // Clear temp skills after successful submission
       setTempSkills([]);
-      
+
       toast("All skills saved to backend!", "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Failed to save skills", "error");
@@ -157,7 +167,7 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
       logoPreview = URL.createObjectURL(form.logo);
     }
 
-    setTempSkills(tempSkills.map(s => 
+    setTempSkills(tempSkills.map(s =>
       s.id === id ? {
         ...s,
         name: form.name,
@@ -389,27 +399,27 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
         <span className="action-strip-text">
           📋 Edit your skills below. Apply previews locally; Submit saves all changes to the backend.
         </span>
-        <button 
-          className="btn btn-warning btn-sm" 
+        <button
+          className="btn btn-warning btn-sm"
           onClick={applyPreview}
           disabled={loading}
         >
           ⚡ Apply (Preview)
         </button>
-        <button 
-          className="btn btn-success btn-sm" 
-          disabled={loading || tempSkills.length === 0} 
+        <button
+          className="btn btn-success btn-sm"
+          disabled={loading || tempSkills.length === 0}
           onClick={() => requireAuth(submitAllSkills)}
         >
           {loading ? "Saving…" : `✅ Submit All${tempSkills.length > 0 ? ` (${tempSkills.length} pending)` : ''}`}
         </button>
-        <button 
-          className="btn btn-primary btn-sm" 
-          onClick={() => { 
-            setShowAdd(true); 
-            setEditId(null); 
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => {
+            setShowAdd(true);
+            setEditId(null);
             setEditTempId(null);
-            setForm({ ...BLANK_FORM }); 
+            setForm({ ...BLANK_FORM });
           }}
         >
           + Add Skill
@@ -444,7 +454,7 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
               {items.map((s) => {
                 const isTemp = 'isTemp' in s && s.isTemp;
                 const tempSkill = isTemp ? s as TempSkill : null;
-                
+
                 return (
                   <div key={isTemp ? tempSkill?.id : (s as Skill).id}>
                     <div className="item-row" style={isTemp ? { backgroundColor: '#fef3c7', borderRadius: '4px', padding: '8px' } : {}}>
@@ -454,8 +464,8 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
                             <img src={tempSkill.logo_preview} alt={s.name} style={{ maxWidth: '40px', maxHeight: '40px' }} />
                           ) : "🆕"
                         ) : (
-                          (s as Skill).logo_path ? 
-                            <img src={`${BASE_URL}/static${(s as Skill).logo_path}`} alt={s.name} /> : 
+                          (s as Skill).logo_path ?
+                            <img src={`${BASE_URL}/static${(s as Skill).logo_path}`} alt={s.name} /> :
                             "🔧"
                         )}
                       </div>
@@ -473,10 +483,10 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
                       <div className="item-actions">
                         {isTemp ? (
                           <>
-                            <button 
-                              className="btn btn-ghost btn-sm" 
+                            <button
+                              className="btn btn-ghost btn-sm"
                               onClick={() => {
-                                if(tempSkill){
+                                if (tempSkill) {
                                   startEditTemp(tempSkill)
                                 }
                               }}
@@ -484,11 +494,11 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
                             >
                               ✏️ Edit
                             </button>
-                            <button 
-                              className="btn btn-danger btn-sm" 
-                              disabled={loading || !tempSkill} 
+                            <button
+                              className="btn btn-danger btn-sm"
+                              disabled={loading || !tempSkill}
                               onClick={() => {
-                                if (tempSkill?.id){
+                                if (tempSkill?.id) {
                                   deleteTempSkill(tempSkill.id)
                                 }
                               }}
@@ -498,16 +508,16 @@ export default function SkillsSection({ requireAuth, toast }: Props) {
                           </>
                         ) : (
                           <>
-                            <button 
-                              className="btn btn-ghost btn-sm" 
+                            <button
+                              className="btn btn-ghost btn-sm"
                               onClick={() => startEdit(s as Skill)}
                               disabled={loading}
                             >
                               ✏️ Edit
                             </button>
-                            <button 
-                              className="btn btn-danger btn-sm" 
-                              disabled={loading} 
+                            <button
+                              className="btn btn-danger btn-sm"
+                              disabled={loading}
                               onClick={() => requireAuth(() => deleteSkill((s as Skill).id))}
                             >
                               🗑

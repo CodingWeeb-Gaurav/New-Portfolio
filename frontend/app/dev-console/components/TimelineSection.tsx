@@ -3,149 +3,149 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest, apiFormRequest } from "@/services/api";
 import { saveToStorage, getFromStorage } from "@/services/adminData";
 
-interface Timeline { 
-  id: string; 
-  header: string; 
-  subheader: string; 
-  date: string; 
-  description: string; 
-  order: number; 
-  logo_path?: string; 
+interface Timeline {
+    id: string;
+    header: string;
+    subheader: string;
+    date: string;
+    description: string;
+    order: number;
+    logo_path?: string;
 }
 
 // Temporary interface for UI-only items
 interface TempTimeline extends Omit<Timeline, 'id' | 'order'> {
-  id?: string;
-  order: number | string;
-  isTemp?: boolean;
-  logoFile?: File | null;
-  logo_preview?: string;
+    id?: string;
+    order: number | string;
+    isTemp?: boolean;
+    logoFile?: File | null;
+    logo_preview?: string;
 }
 
-interface Props { 
-  requireAuth: (cb: () => void) => void; 
-  toast: (msg: string, type?: string) => void; 
+interface Props {
+    requireAuth: (cb: () => void) => void;
+    toast: (msg: string, type?: string) => void;
 }
 
-const BLANK = { 
-  header: "", 
-  subheader: "", 
-  date: "", 
-  description: "", 
-  order: "1", 
-  dateType: "single" as "single" | "range",
-  startDate: "",
-  endDate: "",
-  logo: null as File | null 
+const BLANK = {
+    header: "",
+    subheader: "",
+    date: "",
+    description: "",
+    order: "1",
+    dateType: "single" as "single" | "range",
+    startDate: "",
+    endDate: "",
+    logo: null as File | null
 };
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // Month picker component
-const MonthYearPicker = ({ value, onChange, placeholder, min, max }: { 
-  value: string; 
-  onChange: (val: string) => void; 
-  placeholder?: string;
-  min?: string;
-  max?: string;
+const MonthYearPicker = ({ value, onChange, placeholder, min, max }: {
+    value: string;
+    onChange: (val: string) => void;
+    placeholder?: string;
+    min?: string;
+    max?: string;
 }) => {
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 50 }, (_, i) => currentYear - 30 + i);
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 50 }, (_, i) => currentYear - 30 + i);
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
 
-  // Parse initial values from props.value
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    if (value) {
-      const [month] = value.split('/');
-      return month || "";
-    }
-    return "";
-  });
-  
-  const [selectedYear, setSelectedYear] = useState(() => {
-    if (value) {
-      const [, year] = value.split('/');
-      return year || "";
-    }
-    return "";
-  });
+    // Parse initial values from props.value
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        if (value) {
+            const [month] = value.split('/');
+            return month || "";
+        }
+        return "";
+    });
 
-  // Update local state when props.value changes (for edit forms)
-  useEffect(() => {
-    if (value) {
-      const [month, year] = value.split('/');
-      if (month !== selectedMonth) setSelectedMonth(month || "");
-      if (year !== selectedYear) setSelectedYear(year || "");
-    } else {
-      if (selectedMonth !== "") setSelectedMonth("");
-      if (selectedYear !== "") setSelectedYear("");
-    }
-  }, [value]); // Only depend on value, not on selectedMonth/selectedYear
+    const [selectedYear, setSelectedYear] = useState(() => {
+        if (value) {
+            const [, year] = value.split('/');
+            return year || "";
+        }
+        return "";
+    });
 
-  // Handle month change without causing infinite loop
-  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newMonth = e.target.value;
-    setSelectedMonth(newMonth);
-    if (newMonth && selectedYear) {
-      onChange(`${newMonth}/${selectedYear}`);
-    } else {
-      onChange("");
-    }
-  };
+    // Update local state when props.value changes (for edit forms)
+    useEffect(() => {
+        if (value) {
+            const [month, year] = value.split('/');
+            if (month !== selectedMonth) setSelectedMonth(month || "");
+            if (year !== selectedYear) setSelectedYear(year || "");
+        } else {
+            if (selectedMonth !== "") setSelectedMonth("");
+            if (selectedYear !== "") setSelectedYear("");
+        }
+    }, [value]); // Only depend on value, not on selectedMonth/selectedYear
 
-  // Handle year change without causing infinite loop
-  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newYear = e.target.value;
-    setSelectedYear(newYear);
-    if (selectedMonth && newYear) {
-      onChange(`${selectedMonth}/${newYear}`);
-    } else {
-      onChange("");
-    }
-  };
+    // Handle month change without causing infinite loop
+    const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newMonth = e.target.value;
+        setSelectedMonth(newMonth);
+        if (newMonth && selectedYear) {
+            onChange(`${newMonth}/${selectedYear}`);
+        } else {
+            onChange("");
+        }
+    };
 
-  return (
-    <div style={{ display: 'flex', gap: '8px' }}>
-      <select 
-        className="form-select" 
-        value={selectedMonth}
-        onChange={handleMonthChange}
-        style={{ flex: 1 }}
-      >
-        <option value="">Month</option>
-        {months.map((month, index) => (
-          <option key={month} value={String(index + 1).padStart(2, '0')}>
-            {month}
-          </option>
-        ))}
-      </select>
-      <select 
-        className="form-select" 
-        value={selectedYear}
-        onChange={handleYearChange}
-        style={{ flex: 1 }}
-      >
-        <option value="">Year</option>
-        {years.map(year => (
-          <option key={year} value={year}>{year}</option>
-        ))}
-      </select>
-    </div>
-  );
+    // Handle year change without causing infinite loop
+    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newYear = e.target.value;
+        setSelectedYear(newYear);
+        if (selectedMonth && newYear) {
+            onChange(`${selectedMonth}/${newYear}`);
+        } else {
+            onChange("");
+        }
+    };
+
+    return (
+        <div style={{ display: 'flex', gap: '8px' }}>
+            <select
+                className="form-select"
+                value={selectedMonth}
+                onChange={handleMonthChange}
+                style={{ flex: 1 }}
+            >
+                <option value="">Month</option>
+                {months.map((month, index) => (
+                    <option key={month} value={String(index + 1).padStart(2, '0')}>
+                        {month}
+                    </option>
+                ))}
+            </select>
+            <select
+                className="form-select"
+                value={selectedYear}
+                onChange={handleYearChange}
+                style={{ flex: 1 }}
+            >
+                <option value="">Year</option>
+                {years.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                ))}
+            </select>
+        </div>
+    );
 };
 
 export default function TimelineSection({ requireAuth, toast }: Props) {
     const [items, setItems] = useState<Timeline[]>([]);
     const [tempItems, setTempItems] = useState<TempTimeline[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Edit states
     const [editId, setEditId] = useState<string | null>(null);
     const [editTempId, setEditTempId] = useState<string | null>(null);
-    
+
     // Form state
     const [form, setForm] = useState({ ...BLANK });
     const [showAdd, setShowAdd] = useState(false);
@@ -153,16 +153,36 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
     const fetchItems = useCallback(async () => {
         try {
             const data = await apiRequest("/api/timelines/");
-            setItems(data); 
-            saveToStorage("timelines", data);
+            setItems(data);
+
+            // Only overwrite the main localStorage tracking if there are no pending preview temp items
+            setTempItems((currentTemps) => {
+                if (currentTemps.length === 0) {
+                    saveToStorage("timelines", data);
+                }
+                return currentTemps;
+            });
         } catch { /* silent */ }
     }, []);
 
     useEffect(() => {
         const cached = getFromStorage<Timeline[]>("timelines");
         if (cached) setItems(cached);
+        const cachedTemps = getFromStorage<TempTimeline[]>("temp_timelines");
+        if (cachedTemps) setTempItems(cachedTemps);
         fetchItems();
     }, [fetchItems]);
+
+    // Setup an effect to persist tempItems locally whenever they change
+    useEffect(() => {
+        if (tempItems.length > 0) {
+            saveToStorage("temp_timelines", tempItems);
+        } else {
+            // Remove the key if empty so we don't accidentally restore an empty array later incorrectly if we don't want to.
+            // But we actually can just save the empty array.
+            saveToStorage("temp_timelines", []);
+        }
+    }, [tempItems]);
 
     // Generate temporary ID
     const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -188,17 +208,17 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                     fd.append("description", tempItem.description || "");
                     fd.append("order", String(tempItem.order));
                     fd.append("logo", tempItem.logoFile);
-                    
+
                     await apiFormRequest("/api/timelines/", "POST", fd);
                 }
             }
 
             // Refresh from backend
             await fetchItems();
-            
+
             // Clear temp items
             setTempItems([]);
-            
+
             toast("All timeline entries saved to backend!", "success");
         } catch (e) {
             toast(e instanceof Error ? e.message : "Failed to save changes", "error");
@@ -228,9 +248,9 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
 
     // Add temporary timeline entry (UI only)
     function addTempItem() {
-        if (!form.header || !form.logo) { 
-            toast("Header and logo are required", "error"); 
-            return; 
+        if (!form.header || !form.logo) {
+            toast("Header and logo are required", "error");
+            return;
         }
 
         let dateValue = "";
@@ -292,7 +312,7 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
 
         const logoPreview = form.logo ? URL.createObjectURL(form.logo) : undefined;
 
-        setTempItems(tempItems.map(item => 
+        setTempItems(tempItems.map(item =>
             item.id === id ? {
                 ...item,
                 header: form.header,
@@ -323,10 +343,10 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
     // Start editing temporary item
     function startEditTemp(item: TempTimeline) {
         setEditTempId(item.id || null);
-        
+
         // Parse the date string
         const { type, startDate, endDate } = parseDateString(item.date);
-        
+
         setForm({
             header: item.header,
             subheader: item.subheader || "",
@@ -342,9 +362,9 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
 
     // Backend operations
     async function submitAdd() {
-        if (!form.header || !form.logo) { 
-            toast("Header and logo required", "error"); 
-            return; 
+        if (!form.header || !form.logo) {
+            toast("Header and logo required", "error");
+            return;
         }
 
         let dateValue = "";
@@ -372,14 +392,14 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
             fd.append("order", form.order);
             fd.append("logo", form.logo);
             await apiFormRequest("/api/timelines/", "POST", fd);
-            setForm({ ...BLANK }); 
+            setForm({ ...BLANK });
             setShowAdd(false);
-            await fetchItems(); 
+            await fetchItems();
             toast("Timeline entry added to backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -409,14 +429,14 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
             if (form.order) fd.append("order", form.order);
             if (form.logo) fd.append("logo", form.logo);
             await apiFormRequest(`/api/timelines/${id}`, "PUT", fd);
-            setEditId(null); 
+            setEditId(null);
             setForm({ ...BLANK });
-            await fetchItems(); 
+            await fetchItems();
             toast("Timeline entry updated in backend!", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -425,32 +445,32 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
         setLoading(true);
         try {
             await apiRequest(`/api/timelines/${id}`, "DELETE");
-            await fetchItems(); 
+            await fetchItems();
             toast("Deleted from backend", "success");
-        } catch (e) { 
-            toast(e instanceof Error ? e.message : "Failed", "error"); 
-        } finally { 
-            setLoading(false); 
+        } catch (e) {
+            toast(e instanceof Error ? e.message : "Failed", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
     function startEdit(t: Timeline) {
-        setEditId(t.id); 
+        setEditId(t.id);
         setShowAdd(false);
-        
+
         // Parse the date string
         const { type, startDate, endDate } = parseDateString(t.date);
-        
-        setForm({ 
-            header: t.header, 
-            subheader: t.subheader, 
+
+        setForm({
+            header: t.header,
+            subheader: t.subheader,
             date: t.date,
-            description: t.description, 
+            description: t.description,
             order: String(t.order),
             dateType: type,
             startDate: startDate,
             endDate: endDate,
-            logo: null 
+            logo: null
         });
     }
 
@@ -459,20 +479,20 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
             <div className="form-row">
                 <div className="form-group">
                     <label className="form-label">Header *</label>
-                    <input 
-                        className="form-input" 
-                        value={form.header} 
-                        onChange={e => setForm(f => ({ ...f, header: e.target.value }))} 
-                        placeholder="B.Tech Computer Science" 
+                    <input
+                        className="form-input"
+                        value={form.header}
+                        onChange={e => setForm(f => ({ ...f, header: e.target.value }))}
+                        placeholder="B.Tech Computer Science"
                     />
                 </div>
                 <div className="form-group">
                     <label className="form-label">Subheader</label>
-                    <input 
-                        className="form-input" 
-                        value={form.subheader} 
-                        onChange={e => setForm(f => ({ ...f, subheader: e.target.value }))} 
-                        placeholder="XYZ University" 
+                    <input
+                        className="form-input"
+                        value={form.subheader}
+                        onChange={e => setForm(f => ({ ...f, subheader: e.target.value }))}
+                        placeholder="XYZ University"
                     />
                 </div>
             </div>
@@ -481,16 +501,16 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                 <label className="form-label">Date Type</label>
                 <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <input 
-                            type="radio" 
-                            checked={form.dateType === 'single'} 
+                        <input
+                            type="radio"
+                            checked={form.dateType === 'single'}
                             onChange={() => setForm(f => ({ ...f, dateType: 'single' }))}
                         /> Single Date
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <input 
-                            type="radio" 
-                            checked={form.dateType === 'range'} 
+                        <input
+                            type="radio"
+                            checked={form.dateType === 'range'}
                             onChange={() => setForm(f => ({ ...f, dateType: 'range' }))}
                         /> Date Range
                     </label>
@@ -500,8 +520,8 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
             {form.dateType === 'single' ? (
                 <div className="form-group">
                     <label className="form-label">Date *</label>
-                    <MonthYearPicker 
-                        value={form.startDate} 
+                    <MonthYearPicker
+                        value={form.startDate}
                         onChange={(val) => setForm(f => ({ ...f, startDate: val }))}
                         placeholder="MM/YYYY"
                     />
@@ -510,16 +530,16 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                 <div className="form-row">
                     <div className="form-group">
                         <label className="form-label">Start Date *</label>
-                        <MonthYearPicker 
-                            value={form.startDate} 
+                        <MonthYearPicker
+                            value={form.startDate}
                             onChange={(val) => setForm(f => ({ ...f, startDate: val }))}
                             placeholder="MM/YYYY"
                         />
                     </div>
                     <div className="form-group">
                         <label className="form-label">End Date *</label>
-                        <MonthYearPicker 
-                            value={form.endDate} 
+                        <MonthYearPicker
+                            value={form.endDate}
                             onChange={(val) => setForm(f => ({ ...f, endDate: val }))}
                             placeholder="MM/YYYY"
                             min={form.startDate}
@@ -531,23 +551,23 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
             <div className="form-row">
                 <div className="form-group">
                     <label className="form-label">Order</label>
-                    <input 
-                        className="form-input" 
-                        type="number" 
-                        value={form.order} 
-                        onChange={e => setForm(f => ({ ...f, order: e.target.value }))} 
+                    <input
+                        className="form-input"
+                        type="number"
+                        value={form.order}
+                        onChange={e => setForm(f => ({ ...f, order: e.target.value }))}
                     />
                 </div>
             </div>
 
             <div className="form-group">
                 <label className="form-label">Description</label>
-                <textarea 
-                    className="form-textarea" 
-                    rows={3} 
-                    value={form.description} 
-                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
-                    placeholder="Brief description..." 
+                <textarea
+                    className="form-textarea"
+                    rows={3}
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Brief description..."
                 />
             </div>
 
@@ -555,28 +575,28 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                 <label className="form-label">
                     Logo {isAdd ? "* (required)" : "(leave empty to keep current)"}
                 </label>
-                <input 
-                    className="form-input" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={e => setForm(f => ({ ...f, logo: e.target.files?.[0] || null }))} 
+                <input
+                    className="form-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setForm(f => ({ ...f, logo: e.target.files?.[0] || null }))}
                 />
             </div>
 
             <div className="btn-group">
-                <button 
-                    className="btn btn-success" 
-                    disabled={loading} 
+                <button
+                    className="btn btn-success"
+                    disabled={loading}
                     onClick={() => onSubmit()}
                 >
                     {loading ? "Saving…" : label}
                 </button>
-                <button 
-                    className="btn btn-ghost" 
-                    onClick={() => { 
-                        setEditId(null); 
+                <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                        setEditId(null);
                         setEditTempId(null);
-                        setShowAdd(false); 
+                        setShowAdd(false);
                         setForm({ ...BLANK });
                     }}
                 >
@@ -602,27 +622,27 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                 <span className="action-strip-text">
                     📋 Edit below. Add to preview, Apply to localStorage, Submit to backend.
                 </span>
-                <button 
-                    className="btn btn-warning btn-sm" 
+                <button
+                    className="btn btn-warning btn-sm"
                     onClick={applyPreview}
                     disabled={loading}
                 >
                     ⚡ Apply (Preview)
                 </button>
-                <button 
-                    className="btn btn-success btn-sm" 
-                    disabled={loading || totalPending === 0} 
+                <button
+                    className="btn btn-success btn-sm"
+                    disabled={loading || totalPending === 0}
                     onClick={() => requireAuth(() => submitAll())}
                 >
                     {loading ? "Saving…" : `✅ Submit All${totalPending > 0 ? ` (${totalPending} pending)` : ''}`}
                 </button>
-                <button 
-                    className="btn btn-primary btn-sm" 
-                    onClick={() => { 
-                        setShowAdd(true); 
-                        setEditId(null); 
+                <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                        setShowAdd(true);
+                        setEditId(null);
                         setEditTempId(null);
-                        setForm({ ...BLANK }); 
+                        setForm({ ...BLANK });
                     }}
                 >
                     + Add Entry (Preview)
@@ -631,14 +651,14 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
 
             {/* Pending items indicator */}
             {totalPending > 0 && (
-                <div className="info-message" style={{ 
-                    padding: '8px 16px', 
-                    marginBottom: '16px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '8px', 
-                    color: '#92400e' 
+                <div className="info-message" style={{
+                    padding: '8px 16px',
+                    marginBottom: '16px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '8px',
+                    color: '#92400e'
                 }}>
-                    ⏳ You have {totalPending} unsaved timeline entr{totalPending > 1 ? 'ies' : 'y'} in preview. 
+                    ⏳ You have {totalPending} unsaved timeline entr{totalPending > 1 ? 'ies' : 'y'} in preview.
                     Click "Apply" to see in portfolio or "Submit All" to save to backend.
                 </div>
             )}
@@ -649,13 +669,13 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                 {allItems.map(item => {
                     const isTemp = 'isTemp' in item && item.isTemp;
                     const tempItem = isTemp ? item as TempTimeline : null;
-                    
+
                     return (
                         <div key={isTemp ? tempItem?.id : (item as Timeline).id}>
-                            <div className="item-row" style={isTemp ? { 
-                                backgroundColor: '#fef3c7', 
-                                borderRadius: '4px', 
-                                padding: '8px' 
+                            <div className="item-row" style={isTemp ? {
+                                backgroundColor: '#fef3c7',
+                                borderRadius: '4px',
+                                padding: '8px'
                             } : {}}>
                                 <div className="item-thumb">
                                     {isTemp ? (
@@ -663,8 +683,8 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                                             <img src={tempItem.logo_preview} alt={item.header} style={{ maxWidth: '40px', maxHeight: '40px' }} />
                                         ) : "📅"
                                     ) : (
-                                        (item as Timeline).logo_path ? 
-                                            <img src={`${BASE_URL}/static${(item as Timeline).logo_path}`} alt={item.header} /> : 
+                                        (item as Timeline).logo_path ?
+                                            <img src={`${BASE_URL}/static${(item as Timeline).logo_path}`} alt={item.header} /> :
                                             "📅"
                                     )}
                                 </div>
@@ -676,14 +696,17 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                                     <div className="item-sub">
                                         {item.subheader} · {item.date} · Order #{item.order}
                                     </div>
+                                    <div className="item-desc" style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px', whiteSpace: 'pre-wrap' }}>
+                                        {item.description}
+                                    </div>
                                 </div>
                                 <div className="item-actions">
                                     {isTemp ? (
                                         <>
-                                            <button 
-                                                className="btn btn-ghost btn-sm" 
+                                            <button
+                                                className="btn btn-ghost btn-sm"
                                                 onClick={() => {
-                                                    if(tempItem) {
+                                                    if (tempItem) {
                                                         startEditTemp(tempItem);
                                                         setShowAdd(false);
                                                     }
@@ -692,9 +715,9 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                                             >
                                                 ✏️ Edit
                                             </button>
-                                            <button 
-                                                className="btn btn-danger btn-sm" 
-                                                disabled={loading || !tempItem} 
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                disabled={loading || !tempItem}
                                                 onClick={() => {
                                                     if (tempItem?.id) {
                                                         deleteTempItem(tempItem.id);
@@ -706,16 +729,16 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                                         </>
                                     ) : (
                                         <>
-                                            <button 
-                                                className="btn btn-ghost btn-sm" 
+                                            <button
+                                                className="btn btn-ghost btn-sm"
                                                 onClick={() => startEdit(item as Timeline)}
                                                 disabled={loading}
                                             >
                                                 ✏️ Edit
                                             </button>
-                                            <button 
-                                                className="btn btn-danger btn-sm" 
-                                                disabled={loading} 
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                disabled={loading}
                                                 onClick={() => requireAuth(() => deleteItem((item as Timeline).id))}
                                             >
                                                 🗑
@@ -724,7 +747,7 @@ export default function TimelineSection({ requireAuth, toast }: Props) {
                                     )}
                                 </div>
                             </div>
-                            
+
                             {/* Edit forms */}
                             {!isTemp && editId === (item as Timeline).id && renderItemForm(() => submitEdit((item as Timeline).id), "✅ Save to Backend")}
                             {isTemp && editTempId === tempItem?.id && renderItemForm(() => updateTempItem(tempItem.id!), "💾 Update Preview", false, true)}
