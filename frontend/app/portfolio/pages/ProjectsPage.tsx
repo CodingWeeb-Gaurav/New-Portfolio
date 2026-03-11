@@ -2,126 +2,141 @@
 
 import { useEffect, useState } from "react";
 import { getFromStorage } from "@/services/adminData";
+import { FaGithub } from "react-icons/fa";
+import { FiExternalLink } from "react-icons/fi";
 import "./projects.css";
 
 interface Project {
-    id?: number | string;
-    title?: string;
+    id?: string;
+    name?: string;
     description?: string;
-    tech_stack?: string[];
+    skills?: string[];
     github_url?: string;
-    live_url?: string;
-    image_url?: string;
-    category?: string | { name?: string };
-    featured?: boolean;
-    status?: string;
+    demo_url?: string;
+    image_link?: string;
+    image_preview?: string;
+    category_id?: string;
+    difficulty?: number;
+    enabled?: boolean;
+    order?: number;
 }
 
 interface Category {
-    id?: number | string;
+    id?: string;
     name?: string;
+    enabled?: boolean;
+    order?: number;
 }
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [activeCategory, setActiveCategory] = useState<string>("All");
+
+    const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+    function resolveImg(raw?: string) {
+        if (!raw) return "";
+        if (raw.startsWith("http") || raw.startsWith("blob:")) return raw;
+        return BASE.replace(/\/$/, "") + "/static" + (raw.startsWith("/") ? raw : "/" + raw);
+    }
 
     useEffect(() => {
         const p = getFromStorage<Project[]>("projects");
-        if (Array.isArray(p)) setProjects(p);
+        if (Array.isArray(p)) setProjects(p.filter(pr => pr.enabled !== false));
         const c = getFromStorage<Category[]>("projectCategories");
-        if (Array.isArray(c)) setCategories(c);
+        if (Array.isArray(c)) setCategories(c.filter(cat => cat.enabled !== false));
     }, []);
 
-    const getCatName = (c: Project["category"]) => {
-        if (!c) return "";
-        if (typeof c === "string") return c;
-        return c.name ?? "";
-    };
+    /* Group projects by category, sorted by category order */
+    const sortedCats = [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-    const filtered =
-        activeCategory === "All"
-            ? projects
-            : projects.filter((p) => getCatName(p.category) === activeCategory);
-
-    const allCats = ["All", ...categories.map((c) => c.name ?? "")];
+    const grouped = sortedCats
+        .map(cat => ({
+            cat,
+            items: [...projects.filter(p => p.category_id === cat.id)]
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+        }))
+        .filter(g => g.items.length > 0);
 
     return (
         <div className="page-container projects-page">
             <h1 className="section-title">Projects</h1>
-            <p className="section-subtitle">Things I've built</p>
+            <p className="section-subtitle">Things I&apos;ve built</p>
 
-            {/* Category filter */}
-            {categories.length > 0 && (
-                <div className="projects-filter">
-                    {allCats.map((cat) => (
-                        <button
-                            key={cat}
-                            className={`filter-btn${activeCategory === cat ? " active" : ""}`}
-                            onClick={() => setActiveCategory(cat)}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {filtered.length === 0 ? (
+            {grouped.length === 0 ? (
                 <div className="empty-state glass-card">
                     <p>No projects yet. Add them via the Admin panel.</p>
                 </div>
             ) : (
-                <div className="projects-grid grid-2">
-                    {filtered.map((proj, idx) => {
-                        let finalImgUrl = proj.image_url;
-                        if (finalImgUrl && !finalImgUrl.startsWith("http")) {
-                            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-                            finalImgUrl = baseUrl.replace(/\/$/, "") + "/" + finalImgUrl.replace(/^\//, "");
-                        }
+                grouped.map(({ cat, items }) => (
+                    <div className="projects-category" key={cat.id}>
+                        <h2 className="projects-cat-title">{cat.name}</h2>
 
-                        return (
-                            <div className="project-card glass-card" key={proj.id ?? idx}>
-                                {finalImgUrl && (
-                                    <img
-                                        src={finalImgUrl}
-                                        alt={proj.title}
-                                        className="project-img"
-                                    />
-                                )}
-                                <div className="project-body">
-                                    <div className="project-meta">
-                                        {proj.featured && <span className="badge">Featured</span>}
-                                        {proj.status && (
-                                            <span className="project-status">{proj.status}</span>
-                                        )}
-                                    </div>
-                                    <h3 className="project-title">{proj.title}</h3>
-                                    <p className="project-desc">{proj.description}</p>
-                                    {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
-                                        <div className="project-tech">
-                                            {proj.tech_stack.map((t) => (
-                                                <span className="tech-tag" key={t}>{t}</span>
-                                            ))}
+                        <div className="projects-row">
+                            {items.map((proj, idx) => {
+                                const imgSrc = resolveImg(proj.image_preview || proj.image_link);
+
+                                return (
+                                    <div className="project-card glass-card" key={proj.id ?? idx}>
+                                        {/* Image — top 50% */}
+                                        <div className="project-img-area">
+                                            {imgSrc ? (
+                                                <img
+                                                    src={imgSrc}
+                                                    alt={proj.name}
+                                                    className="project-img"
+                                                />
+                                            ) : (
+                                                <div className="project-img-placeholder">
+                                                    <span>{cat.name ?? "PROJECT"}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div className="project-links">
-                                        {proj.github_url && (
-                                            <a href={proj.github_url} target="_blank" rel="noreferrer" className="home-link-btn">
-                                                GitHub
-                                            </a>
-                                        )}
-                                        {proj.live_url && (
-                                            <a href={proj.live_url} target="_blank" rel="noreferrer" className="home-link-btn">
-                                                Live Demo
-                                            </a>
-                                        )}
+
+                                        {/* Body — bottom 50% */}
+                                        <div className="project-body">
+                                            <h3 className="project-title">{proj.name}</h3>
+                                            <p className="project-desc">{proj.description}</p>
+
+                                            {Array.isArray(proj.skills) && proj.skills.length > 0 && (
+                                                <div className="project-tech">
+                                                    {proj.skills.map(s => (
+                                                        <span className="tech-tag" key={s}>{s}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="project-links">
+                                                {proj.github_url && (
+                                                    <a
+                                                        href={proj.github_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="proj-icon-link"
+                                                        title="GitHub"
+                                                    >
+                                                        <FaGithub size={20} />
+                                                    </a>
+                                                )}
+                                                {proj.demo_url && (
+                                                    <a
+                                                        href={proj.demo_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="proj-icon-link"
+                                                        title="Live Demo"
+                                                    >
+                                                        <FiExternalLink size={20} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))
             )}
         </div>
     );

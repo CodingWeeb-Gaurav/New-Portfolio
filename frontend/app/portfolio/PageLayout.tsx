@@ -121,6 +121,7 @@ export default function PageLayout() {
     return (
         <div className="portfolio-wrapper">
             {/* Sliding background */}
+
             <div
                 className="portfolio-bg"
                 style={{ backgroundPosition: BG_POSITION[activePage] }}
