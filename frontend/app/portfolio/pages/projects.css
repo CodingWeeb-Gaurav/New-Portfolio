@@ -30,6 +30,7 @@
 /* ── Horizontal-scroll row ── */
 .projects-row {
     display: flex;
+    /* width: 100%; */
     gap: 1.25rem;
     overflow-x: auto;
     padding-bottom: 1rem;
@@ -56,9 +57,9 @@
 
 /* ── Project card ── */
 .project-card {
-    flex: 0 0 280px;
+    flex: 0 0 450px;
     /* fixed width so they don't shrink */
-    min-width: 0;
+    min-width: 390px;
     display: flex;
     flex-direction: column;
     overflow: hidden;

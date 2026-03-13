@@ -156,9 +156,11 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             .slice(0, 2);
 
     const previewSkills = [
-        ...topFromGroup(catGroups["tools"] ?? []),
-        ...topFromGroup(catGroups["frameworks"] ?? []),
         ...topFromGroup(catGroups["lang"] ?? []),
+        ...topFromGroup(catGroups["frameworks"] ?? []),
+        ...topFromGroup(catGroups["tools"] ?? []),
+        
+        
     ].slice(0, 6);
 
     /* Category name for project placeholder */

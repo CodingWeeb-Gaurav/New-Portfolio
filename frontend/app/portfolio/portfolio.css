@@ -80,7 +80,7 @@
 
 /* ── Shared page container ── */
 .page-container {
-    max-width: 1100px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 3rem 1.5rem 6rem;
     min-height: calc(100vh - var(--nav-height));
@@ -88,12 +88,13 @@
 
 /* ── Glass card ── */
 .glass-card {
-    background: var(--surface);
+    background: rgba(15, 15, 30, 0.2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     backdrop-filter: blur(18px) saturate(1.4);
     box-shadow: var(--shadow);
     padding: 2rem;
+    /* opacity: 0.5; */
 }
 
 /* ── Section heading ── */

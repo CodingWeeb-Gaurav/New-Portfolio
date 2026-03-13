@@ -71,7 +71,11 @@ export default function SkillsPage() {
     }, {});
 
     // Ensure they render in a consistent order
-    const ORDERED_CATS = ["Databases & Tools", "Frameworks & Libraries", "Programming Languages"];
+    const ORDERED_CATS = [
+        "Programming Languages",
+        "Frameworks & Libraries",
+        "Databases & Tools"
+    ];
     const displayCategories = ORDERED_CATS.filter(c => categories[c]?.length > 0);
 
     return (
