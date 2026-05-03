@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { getFromStorage } from "@/services/adminData";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import { FiExternalLink, FiMail, FiPhone, FiMapPin } from "react-icons/fi";
+
 import "./home.css";
 
 type Page = "center" | "left" | "right" | "top" | "bottom";

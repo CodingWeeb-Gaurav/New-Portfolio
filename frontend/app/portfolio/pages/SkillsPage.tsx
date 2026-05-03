@@ -79,7 +79,7 @@ export default function SkillsPage() {
     const displayCategories = ORDERED_CATS.filter(c => categories[c]?.length > 0);
 
     return (
-        <div className="page-container skills-page">
+        <div className="page-container skills-page ">
             <h1 className="section-title">Skills</h1>
             <p className="section-subtitle">What I work with</p>
 

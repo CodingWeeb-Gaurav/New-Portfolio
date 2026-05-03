@@ -432,7 +432,7 @@
 }
 
 .timeline-mini-card {
-    flex: 0 0 260px;
+    flex: 0 0 360px;
     display: flex;
     align-items: flex-start;
     gap: 0.85rem;

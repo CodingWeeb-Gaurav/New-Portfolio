@@ -137,6 +137,11 @@
 .cf-graph-wrap {
     padding: 1.5rem;
 }
+.page-container.skills-page{
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
 
 @media (max-width: 640px) {
     .skills-grid {

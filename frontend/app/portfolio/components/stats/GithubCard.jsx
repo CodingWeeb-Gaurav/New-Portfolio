@@ -6,7 +6,7 @@ const GithubCard = ({ data }) => {
 
   return (
     <div
-      className="platform-banner rounded-2xl p-8 md:p-10 hover:scale-[1.02] transition-all duration-500 group border border-gray-700/50"
+      className="platform-banner rounded-2xl p-8 md:p-10 hover:scale-[1.02] transition-all duration-500 group border border-gray-700/50 common-padding"
       style={{
         background: 'linear-gradient(135deg, rgba(30,30,30,0.6), rgba(15,15,15,0.8))',
         backdropFilter: 'blur(10px)',

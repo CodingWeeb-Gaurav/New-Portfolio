@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.platform-banner{
+  padding: 20px !important;
+}
+.platform-banner .flex.items-center.mb-4 {
+  margin-bottom: 15px;
+}
+.px-3 {
+  padding-left: 0.5em;
+  padding-right: 0.5rem;
+}

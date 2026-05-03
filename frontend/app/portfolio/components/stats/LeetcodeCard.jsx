@@ -43,15 +43,15 @@ const LeetcodeCard = ({ data }) => {
 
         {/* Difficulty Breakdown */}
         <div className="flex-1 w-full flex flex-col gap-3">
-          <div className="bg-black/30 p-3 rounded-lg border border-white/5 flex items-center justify-between">
+          <div className="bg-black/30 px-3 rounded-lg border border-white/5 flex items-center justify-between">
             <span className="text-emerald-400 font-semibold">Easy</span>
             <span className="text-white font-bold">{data.easySolved || 0}</span>
           </div>
-          <div className="bg-black/30 p-3 rounded-lg border border-white/5 flex items-center justify-between">
+          <div className="bg-black/30 px-3 rounded-lg border border-white/5 flex items-center justify-between">
             <span className="text-yellow-400 font-semibold">Medium</span>
             <span className="text-white font-bold">{data.mediumSolved || 0}</span>
           </div>
-          <div className="bg-black/30 p-3 rounded-lg border border-white/5 flex items-center justify-between">
+          <div className="bg-black/30 px-3 rounded-lg border border-white/5 flex items-center justify-between">
             <span className="text-red-400 font-semibold">Hard</span>
             <span className="text-white font-bold">{data.hardSolved || 0}</span>
           </div>
