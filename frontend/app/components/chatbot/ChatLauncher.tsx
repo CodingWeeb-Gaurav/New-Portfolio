@@ -5,15 +5,16 @@ import Image from "next/image";
 import { useChatbot } from "./ChatbotProvider";
 
 export default function ChatLauncher() {
-  const { open, openChat } = useChatbot();
+  const { ready, open, openChat } = useChatbot();
   const [showBubble, setShowBubble] = useState(false);
 
   useEffect(() => {
+    if (!ready) return;
     const t = setTimeout(() => setShowBubble(true), 2500);
     return () => clearTimeout(t);
-  }, []);
+  }, [ready]);
 
-  if (open) return null;
+  if (!ready || open) return null;
 
   return (
     <div className="chat-launcher" onClick={openChat}>

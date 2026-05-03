@@ -35,8 +35,11 @@ from app.routes.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await test_connection()
-    await create_indexes()   
+    try:
+        await test_connection()
+        await create_indexes()
+    except Exception as e:
+        print(f"[WARN] DB startup tasks failed (server will still run): {e}")
     yield #giving the control back to fastAPI
 
 app = FastAPI(lifespan=lifespan)

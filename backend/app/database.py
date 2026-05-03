@@ -14,9 +14,9 @@ db = client[DB_NAME]
 async def test_connection():
     try:
         await client.server_info()
-        print(" ✅ Connected to MongoDB successfully!")
+        print("[OK] Connected to MongoDB successfully!")
     except Exception as e:
-        print(f" ❌ Failed to connect to MongoDB: {e}")
+        print(f"[ERROR] Failed to connect to MongoDB: {e}")
 
 
 async def create_indexes():

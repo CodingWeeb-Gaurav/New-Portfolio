@@ -6,6 +6,7 @@ import { useChatbot } from "./ChatbotProvider";
 
 export default function ChatWindow() {
   const {
+    ready,
     open,
     setOpen,
     messages,
@@ -23,7 +24,7 @@ export default function ChatWindow() {
     });
   }, [messages]);
 
-  if (!open) return null;
+  if (!ready || !open) return null;
 
   const gifSrc = {
     idle: "/chatbot/GIF2.gif",
@@ -42,18 +43,20 @@ export default function ChatWindow() {
 
   return (
     <div className="chat-window">
-      <Image
-        src={gifSrc}
-        alt="AI Assistant"
-        width={95}
-        height={95}
-        className="chat-avatar"
-        unoptimized
-        priority
-      />
-
       <div className="chat-header">
-        <span>AI Assistant</span>
+        <div className="chat-left">
+          <Image
+            src={gifSrc}
+            alt="AI Assistant"
+            width={55}
+            height={55}
+            className="chat-avatar"
+            unoptimized
+            priority
+          />
+
+          <div className="chat-title">Yuki-Chan 🥰</div>
+        </div>
 
         <button
           type="button"
@@ -62,6 +65,7 @@ export default function ChatWindow() {
         >
           ✕
         </button>
+
       </div>
 
       <div className="chat-body">
@@ -104,5 +108,6 @@ export default function ChatWindow() {
         </button>
       </div>
     </div>
+
   );
 }

@@ -3,29 +3,35 @@ import os
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-MODEL = "gemini-3-flash-preview"
+MODEL = "gemini-2.0-flash"
 
 
-def stream_gemini_response(user_message: str, previous_interaction_id: str | None):
+async def stream_gemini_response(user_message: str, chat_history: list | None = None):
     """
-    Yields tokens AND returns (final_text, new_interaction_id)
+    Async generator that yields ("token", text) tuples as tokens arrive
+    from Gemini, using the conversation history for multi-turn context.
     """
-    stream = client.interactions.create(
+    # Build the contents list for multi-turn conversation
+    contents = []
+
+    if chat_history:
+        for msg in chat_history:
+            role = "user" if msg["role"] == "user" else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": msg["message"]}]
+            })
+
+    # Append the current user message
+    contents.append({
+        "role": "user",
+        "parts": [{"text": user_message}]
+    })
+
+    # Use the async streaming API
+    async for chunk in await client.aio.models.generate_content_stream(
         model=MODEL,
-        input=user_message,
-        previous_interaction_id=previous_interaction_id,
-        stream=True,
-    )
-
-    full_response = ""
-    interaction_id = None
-
-    for chunk in stream:
-        if chunk.event_type == "content.delta":
-            if chunk.delta.type == "text":
-                full_response += chunk.delta.text
-                yield ("token", chunk.delta.text)
-
-        elif chunk.event_type == "interaction.complete":
-            interaction_id = chunk.interaction.id
-            yield ("done", interaction_id, full_response)
+        contents=contents,
+    ):
+        if chunk.text:
+            yield ("token", chunk.text)

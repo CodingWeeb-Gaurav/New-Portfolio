@@ -19,6 +19,7 @@ export default function App() {
 
   const handleContinue = () => {
     setAppState("portfolio");
+    window.dispatchEvent(new Event("portfolio-ready"));
   };
 
   return (

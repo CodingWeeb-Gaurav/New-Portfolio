@@ -8,6 +8,7 @@ import {
   useState,
   ReactNode,
 } from "react";
+import "./chat.css";
 
 type Role = "user" | "ai";
 
@@ -24,6 +25,7 @@ type GifMode =
   | "streaming";
 
 type ChatContextType = {
+  ready: boolean;
   open: boolean;
   setOpen: (v: boolean) => void;
   openChat: () => void;
@@ -58,11 +60,22 @@ export default function ChatbotProvider({
   const wsRef = useRef<WebSocket | null>(null);
   const chatIdRef = useRef("");
 
+  const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [gifMode, setGifMode] = useState<GifMode>("launcher");
 
+  // Listen for portfolio-ready event (fired when welcome screen ends)
   useEffect(() => {
+    const handleReady = () => setReady(true);
+    window.addEventListener("portfolio-ready", handleReady);
+    return () => window.removeEventListener("portfolio-ready", handleReady);
+  }, []);
+
+  // Connect WebSocket only once the portfolio is ready
+  useEffect(() => {
+    if (!ready) return;
+
     chatIdRef.current = generateChatId();
 
     const ws = new WebSocket("ws://localhost:8000/chat/ws");
@@ -102,8 +115,12 @@ export default function ChatbotProvider({
       });
     };
 
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
     return () => ws.close();
-  }, []);
+  }, [ready]);
 
   const openChat = () => {
     setOpen(true);
@@ -115,7 +132,7 @@ export default function ChatbotProvider({
         {
           role: "ai",
           content:
-            "Hey 👋 Ask me anything about Gaurav's skills, projects, work or experience.",
+            "Hello! I'm Yuki🤗, here to answer any questions you have about Gaurav's: Projects, Experience  Tech stack Timeline Extracurricular work I can explain how each project was built step by step. Because if that info was already in his resume, I'd be out of a job 😢.",
         },
       ];
     });
@@ -145,6 +162,7 @@ export default function ChatbotProvider({
   return (
     <ChatContext.Provider
       value={{
+        ready,
         open,
         setOpen,
         openChat,

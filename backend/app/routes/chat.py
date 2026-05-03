@@ -26,10 +26,11 @@ async def chat_ws(websocket: WebSocket):
 
             # Load existing session
             session = await db.chat_sessions.find_one({"_id": chat_id}) or {}
-            previous_interaction_id = session.get("gemini_chat_id")
 
-            # Append user message
+            # Build history for LLM context (existing messages only)
             history = session.get("chatHistory", [])
+
+            # Append user message to history
             history.append({
                 "role": "user",
                 "message": user_message,
@@ -37,16 +38,12 @@ async def chat_ws(websocket: WebSocket):
             })
 
             ai_response = ""
-            new_interaction_id = None
 
-            # Stream from Gemini
-            for event in stream_gemini_response(user_message, previous_interaction_id):
+            # Stream from Gemini (async generator)
+            async for event in stream_gemini_response(user_message, history[:-1]):
                 if event[0] == "token":
                     await websocket.send_text(event[1])
                     ai_response += event[1]
-
-                elif event[0] == "done":
-                    new_interaction_id = event[1]
 
             # Append AI message
             history.append({
@@ -63,7 +60,6 @@ async def chat_ws(websocket: WebSocket):
                 {"_id": chat_id},
                 {
                     "$set": {
-                        "gemini_chat_id": new_interaction_id,
                         "chatHistory": history,
                         "updated_at": datetime.utcnow(),
                     }
