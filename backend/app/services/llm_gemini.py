@@ -3,32 +3,50 @@ import os
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
 
 
-async def stream_gemini_response(user_message: str, chat_history: list | None = None):
+async def stream_gemini_response(
+    system_prompt: str,
+    chat_history: list,
+    user_message: str,
+    context_chunks: list | None = None,
+):
     """
-    Async generator that yields ("token", text) tuples as tokens arrive
-    from Gemini, using the conversation history for multi-turn context.
+    Async generator for streaming Gemini response
     """
-    # Build the contents list for multi-turn conversation
+
     contents = []
 
-    if chat_history:
-        for msg in chat_history:
-            role = "user" if msg["role"] == "user" else "model"
-            contents.append({
-                "role": role,
-                "parts": [{"text": msg["message"]}]
-            })
-
-    # Append the current user message
+    # 🔹 SYSTEM PROMPT
     contents.append({
         "role": "user",
-        "parts": [{"text": user_message}]
+        "parts": [{"text": f"SYSTEM:\n{system_prompt}"}],
     })
 
-    # Use the async streaming API
+    # 🔹 CHAT HISTORY (last 3 messages already trimmed outside)
+    for msg in chat_history:
+        role = "user" if msg["role"] == "user" else "model"
+        contents.append({
+            "role": role,
+            "parts": [{"text": msg["message"]}],
+        })
+
+    # 🔹 CONTEXT CHUNKS (future semantic search)
+    if context_chunks:
+        joined_chunks = "\n\n".join(context_chunks)
+        contents.append({
+            "role": "user",
+            "parts": [{"text": f"CONTEXT:\n{joined_chunks}"}],
+        })
+
+    # 🔹 CURRENT USER MESSAGE
+    contents.append({
+        "role": "user",
+        "parts": [{"text": user_message}],
+    })
+
+    # 🔹 STREAM RESPONSE
     async for chunk in await client.aio.models.generate_content_stream(
         model=MODEL,
         contents=contents,

@@ -65,25 +65,62 @@ export default function ChatbotProvider({
   const [messages, setMessages] = useState<Message[]>([]);
   const [gifMode, setGifMode] = useState<GifMode>("launcher");
 
-  // Listen for portfolio-ready event (fired when welcome screen ends)
+  // 🔹 Listen for portfolio-ready event
   useEffect(() => {
     const handleReady = () => setReady(true);
     window.addEventListener("portfolio-ready", handleReady);
-    return () => window.removeEventListener("portfolio-ready", handleReady);
+    return () =>
+      window.removeEventListener("portfolio-ready", handleReady);
   }, []);
 
-  // Connect WebSocket only once the portfolio is ready
+  // 🔹 WebSocket connection
   useEffect(() => {
     if (!ready) return;
 
     chatIdRef.current = generateChatId();
 
-    const ws = new WebSocket("ws://localhost:8000/chat/ws");
+    // ✅ Use ENV instead of hardcoded localhost
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+
+    const wsProtocol = baseUrl.startsWith("https") ? "wss" : "ws";
+    const wsHost = baseUrl.replace(/^https?:\/\//, "");
+
+    const fullWsUrl = `${wsProtocol}://${wsHost}/chat/ws`;
+
+    const ws = new WebSocket(fullWsUrl);
     wsRef.current = ws;
 
     let currentStreaming = "";
 
+    ws.onopen = () => {
+      // 🔹 Send handshake (chatId only)
+      ws.send(
+        JSON.stringify({
+          chatId: chatIdRef.current,
+        })
+      );
+    };
+
     ws.onmessage = (event) => {
+      // 🔹 Try parsing JSON (for history)
+      try {
+        const parsed = JSON.parse(event.data);
+
+        if (parsed.type === "history") {
+          const formatted: Message[] = parsed.messages.map(
+            (m: any) => ({
+              role: m.role === "ai" ? "ai" : "user",
+              content: m.message,
+            })
+          );
+
+          setMessages(formatted);
+          return;
+        }
+      } catch {
+        // Not JSON → continue (stream tokens)
+      }
+
       const data = event.data;
 
       if (data === "__END__") {
@@ -92,6 +129,7 @@ export default function ChatbotProvider({
         return;
       }
 
+      // First token → create AI message
       if (currentStreaming === "") {
         setGifMode("streaming");
 
@@ -122,6 +160,7 @@ export default function ChatbotProvider({
     return () => ws.close();
   }, [ready]);
 
+  // 🔹 Open chat (only inject welcome if no history)
   const openChat = () => {
     setOpen(true);
 
@@ -132,7 +171,7 @@ export default function ChatbotProvider({
         {
           role: "ai",
           content:
-            "Hello! I'm Yuki🤗, here to answer any questions you have about Gaurav's: Projects, Experience  Tech stack Timeline Extracurricular work I can explain how each project was built step by step. Because if that info was already in his resume, I'd be out of a job 😢.",
+            "Hello! I'm Yuki 🤗 — I can help you explore Gaurav's projects, experience, tech stack, and more. Ask me anything!",
         },
       ];
     });
@@ -140,6 +179,7 @@ export default function ChatbotProvider({
     setGifMode("idle");
   };
 
+  // 🔹 Send message
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
     if (!wsRef.current) return;
@@ -151,9 +191,9 @@ export default function ChatbotProvider({
 
     setGifMode("waiting");
 
+    // ✅ New protocol (NO chatId here)
     wsRef.current.send(
       JSON.stringify({
-        chatId: chatIdRef.current,
         message: text,
       })
     );
