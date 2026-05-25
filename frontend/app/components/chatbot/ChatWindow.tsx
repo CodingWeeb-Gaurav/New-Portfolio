@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useChatbot } from "./ChatbotProvider";
+import Markdown from "./Markdown";
 
 export default function ChatWindow() {
   const {
@@ -78,7 +79,7 @@ export default function ChatWindow() {
                 : "msg ai-msg"
             }
           >
-            {m.content}
+            {m.role === "user" ? m.content : <Markdown content={m.content} />}
           </div>
         ))}
 

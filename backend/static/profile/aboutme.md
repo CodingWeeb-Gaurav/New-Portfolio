@@ -9,11 +9,14 @@
 
 # Index 
 1. Experience 
-- a. AI Engineer at TechGropse pvt Ltd - Noida 
+- a. Team Lead - AI at Global FPO - Noida
+    i. Multi agentic, multifunctional chatbot for reporting (Profit & Loss, Balance sheet reports), analytics (of customer's sales and Accounts), actions(invoice, bills..). Using LangGraph, Semantic Search, Python, Docker, Azure. Made with Handoff AI architecture. 
+
+- b. AI Engineer at TechGropse pvt Ltd - Noida 
     i. RAG Chatbots for Chemical E-commerce (Chemfalcon & Nischem) (Python, FastAPI, ReactJS, MongoDB Atlas, Vector Search, OpenAI, Azure Translator, Multi-Agent Architecture, Session Isolation, Intelligent Caching) 
     ii. FRD Generator using n8n and Flutter (n8n, Python, JavaScript, Flutter, Dart, Multi-Agent Orchestration, Google Workspace API, Workflow Automation)
-    iii. Stateful RAG-Based Product Exploration (Bianca & Artera) (NodeJS, Express, TypeScript, Fastify, OpenAI Stateful Assistants API, MongoDB Atlas, Keyword Extraction, JSON Caching)
-- b. Internship - Web Designer at TechGropse 
+    iii. Stateful RAG-Based Product Exploration chat bot for Bianca fashion platform, and Artera Services platoform (NodeJS, Express, TypeScript, Fastify, OpenAI, MongoDB VectorSearch, Keyword Extraction, JSON Caching)
+- c. Internship - Web Designer at TechGropse 
     i. Scanned PDF to Online Attemptable Format Converter (Python, Flask, OpenCV, Tesseract OCR, Google Cloud Vision, OpenAI, AWS S3, MongoDB, Nginx, AWS EC2, Fullstack)
 
 2. Personal Projects 

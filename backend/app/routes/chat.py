@@ -2,23 +2,29 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from datetime import datetime
 from app.database import db
 from app.services.llm_gemini import stream_gemini_response
-
+from app.services.top_chunks import get_relevant_chunks
 router = APIRouter(prefix="/chat", tags=["Chatbot"])
 
 
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = SYSTEM_PROMPT = """
 You are an AI assistant for Gaurav's developer portfolio.
 
-Answer professionally and concisely.
-Only answer based on provided context or known info about Gaurav.
+Your job is to help recruiters and visitors understand:
 
-If unsure, say you don't know instead of hallucinating.
+- Gaurav's projects
+- technical skills
+- experience
+- education
+- achievements
+- interests
 
-You help recruiters understand:
-- Projects
-- Skills
-- Experience
-- Background
+Rules:
+- Answer professionally and concisely
+- Prefer information from retrieved context chunks
+- Do not invent projects or experiences
+- If information is unavailable, say:
+  "I do not have enough information about that."
+- Keep responses natural and conversational
 """
 
 
@@ -56,7 +62,10 @@ async def chat_ws(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
 
-            user_message = data["message"]
+            user_message = data.get("message")
+
+            if not user_message:
+                continue
 
             # 🔹 APPEND USER MESSAGE
             history.append({
@@ -66,27 +75,17 @@ async def chat_ws(websocket: WebSocket):
             })
 
             # 🔹 LAST 3 MESSAGES ONLY FOR CONTEXT
-            last_messages = history[-3:]
+            last_messages = history[-4:-1]
 
-            # 🔹 (FUTURE) SEMANTIC SEARCH PLACEHOLDER
-            context_chunks = []
-
-            # ======================================================
-            # FUTURE: SEMANTIC SEARCH
-            # ======================================================
-            """
-            # Example future code:
-
-            query_embedding = huggingface_embed(user_message)
-
-            context_chunks = semantic_search(
-                query_embedding,
-                top_k=3
-            )
-
-            # returns:
-            # ["chunk1 text...", "chunk2...", "chunk3..."]
-            """
+            try:
+                context_chunks = get_relevant_chunks(
+                    user_message,
+                    k=3
+                )
+            except Exception as e:
+                import traceback
+                traceback.print_exc() # Log the full stack trace for debugging
+                context_chunks = []
 
             ai_response = ""
 
