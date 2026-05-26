@@ -182,9 +182,29 @@ EMBEDDING_PATH = os.path.join(
     "chunk_embeddings.pkl"
 )
 
-CHUNKS, CHUNK_EMBEDDINGS, MODEL_NAME = load_embeddings(
-    EMBEDDING_PATH
-)
+_cached_chunks = None
+_cached_embeddings = None
+_cached_model_name = None
+_cached_mtime = None
+
+def get_embeddings_data():
+    global _cached_chunks, _cached_embeddings, _cached_model_name, _cached_mtime
+    
+    if not os.path.exists(EMBEDDING_PATH):
+        print(f"[WARN] Embeddings file not found at {EMBEDDING_PATH}. Chatbot will run with empty context.")
+        return [], np.empty((0, 384), dtype=np.float32), "None"
+        
+    try:
+        current_mtime = os.path.getmtime(EMBEDDING_PATH)
+        if _cached_mtime is None or current_mtime > _cached_mtime or _cached_chunks is None:
+            _cached_chunks, _cached_embeddings, _cached_model_name = load_embeddings(EMBEDDING_PATH)
+            _cached_mtime = current_mtime
+    except Exception as e:
+        print(f"[WARN] Error loading embeddings from {EMBEDDING_PATH}: {e}")
+        if _cached_chunks is None:
+            return [], np.empty((0, 384), dtype=np.float32), "None"
+            
+    return _cached_chunks, _cached_embeddings, _cached_model_name
 
 
 # =========================================================
@@ -200,6 +220,9 @@ def get_relevant_chunks(
 
     Returns top-k relevant chunk texts.
     """
+    chunks, chunk_embeddings, model_name = get_embeddings_data()
+    if not chunks or len(chunks) == 0:
+        return []
 
     formatted_query = (
         "Represent this sentence for searching relevant passages: "
@@ -212,8 +235,8 @@ def get_relevant_chunks(
 
     results = top_k_chunks(
         query_embedding=query_embedding,
-        chunk_embeddings=CHUNK_EMBEDDINGS,
-        chunks=CHUNKS,
+        chunk_embeddings=chunk_embeddings,
+        chunks=chunks,
         k=k
     )
 

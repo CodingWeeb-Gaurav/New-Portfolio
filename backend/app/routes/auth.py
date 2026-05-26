@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response
 from app.core.security import verify_password, create_access_token, create_refresh_token, hash_password
 from app.database import db
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import random
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -74,13 +74,19 @@ async def request_password_reset(data: dict):
 
     otp = str(random.randint(100000, 999999))
 
+    # Set expiry time to 10 minutes from now
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
     await db.otp.insert_one({
         "email": email,
         "otp": otp,
-        "expires_at": datetime.now(timezone.utc)
+        "expires_at": expires_at
     })
 
-    # send otp via email here
+    # Log to stdout for developer visibility via Render/Server logs (in lieu of active SMTP service)
+    print(f"[AUTH] Generated password reset OTP for user {email}: {otp} (Expires at: {expires_at.isoformat()})")
+
+    # send otp via email here if SMTP is configured
 
     return {"message": "OTP sent"}
 
@@ -96,6 +102,15 @@ async def verify_otp(data: dict):
 
     if not record:
         raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    # Timezone-safe expiration check
+    record_expiry = record.get("expires_at")
+    if record_expiry:
+        # Handle datetime matching for offset-aware vs offset-naive UTC dates
+        now = datetime.now(timezone.utc) if record_expiry.tzinfo is not None else datetime.utcnow()
+        if now > record_expiry:
+            await db.otp.delete_one({"_id": record["_id"]})
+            raise HTTPException(status_code=400, detail="OTP has expired")
 
     new_hash = hash_password(new_password)
 

@@ -79,8 +79,8 @@ export default function ChatbotProvider({
 
     chatIdRef.current = generateChatId();
 
-    // ✅ Use ENV instead of hardcoded localhost
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
+    // ✅ Use ENV with fallback instead of hardcoded localhost
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
     const wsProtocol = baseUrl.startsWith("https") ? "wss" : "ws";
     const wsHost = baseUrl.replace(/^https?:\/\//, "");

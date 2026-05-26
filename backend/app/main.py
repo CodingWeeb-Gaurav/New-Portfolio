@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from app.database import test_connection, create_indexes
 from contextlib import asynccontextmanager
+import asyncio
+import httpx
 
 #Fetch FRONTEND_URL from env
 import os
@@ -33,6 +35,34 @@ from fastapi.staticfiles import StaticFiles
 from app.routes.auth import router as auth_router
 
 
+async def keep_alive_self_ping():
+    """
+    Periodically sends an HTTP request to the /health route to keep the Render free tier container awake.
+    Render automatically exposes the public HTTPS address under the RENDER_EXTERNAL_URL environment variable.
+    """
+    await asyncio.sleep(10)  # Wait 10 seconds after boot to start the ping loop
+    
+    public_url = os.getenv("RENDER_EXTERNAL_URL")
+    if not public_url:
+        print("[KEEP-ALIVE] RENDER_EXTERNAL_URL env not set. Skipping self-ping loop (this is normal locally).")
+        return
+        
+    ping_url = f"{public_url.rstrip('/')}/health"
+    print(f"[KEEP-ALIVE] Initializing active self-ping loop targeting: {ping_url}")
+    
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                # Use a quick 10-second timeout to avoid clogging threads
+                res = await client.get(ping_url, timeout=10)
+                print(f"[KEEP-ALIVE] Self-ping status: {res.status_code}")
+            except Exception as e:
+                print(f"[KEEP-ALIVE] Self-ping request failed: {e}")
+            
+            # Sleep 10 minutes (600 seconds) to stay safely inside Render's 15-minute sleep threshold
+            await asyncio.sleep(600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -40,7 +70,14 @@ async def lifespan(app: FastAPI):
         await create_indexes()
     except Exception as e:
         print(f"[WARN] DB startup tasks failed (server will still run): {e}")
+    
+    # Start the automated self-ping loop as a background task
+    ping_task = asyncio.create_task(keep_alive_self_ping())
+    
     yield #giving the control back to fastAPI
+    
+    # Clean up the task on shutdown
+    ping_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware( # Add CORS or other middleware if needed
